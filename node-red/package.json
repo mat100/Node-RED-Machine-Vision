@@ -1,7 +1,7 @@
 {
   "name": "node-red-contrib-machine-vision-flow",
   "version": "1.0.0",
-  "description": "Machine Vision nodes for Node-RED inspired by Keyence and Cognex",
+  "description": "Industrial machine vision nodes for Node-RED with template matching, edge detection, color detection, ArUco markers, and rotation analysis",
   "author": "Machine Vision Flow",
   "license": "MIT",
   "keywords": [
@@ -10,9 +10,20 @@
     "computer-vision",
     "opencv",
     "template-matching",
-    "inspection"
+    "inspection",
+    "quality-control",
+    "image-processing",
+    "edge-detection",
+    "color-detection",
+    "aruco",
+    "qr-code",
+    "automation",
+    "factory-automation",
+    "keyence",
+    "cognex"
   ],
   "node-red": {
+    "version": ">=2.0.0",
     "nodes": {
       "mv-camera-capture": "nodes/camera/mv-camera-capture.js",
       "mv-image-simulator": "nodes/camera/mv-image-simulator.js",
@@ -35,9 +46,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/machine-vision-flow"
+    "url": "https://github.com/yourusername/machine-vision-flow.git"
   },
+  "bugs": {
+    "url": "https://github.com/yourusername/machine-vision-flow/issues"
+  },
+  "homepage": "https://github.com/yourusername/machine-vision-flow#readme",
   "engines": {
     "node": ">=14.0.0"
-  }
+  },
+  "files": [
+    "nodes/**/*.js",
+    "nodes/**/*.html",
+    "README.md",
+    "LICENSE"
+  ]
 }
