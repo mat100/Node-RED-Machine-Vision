@@ -6,7 +6,17 @@ module.exports = function(RED) {
         const node = this;
 
         // Configuration
-        node.cameraId = config.cameraId || 'test';
+        node.sourceType = config.sourceType || 'usb';
+
+        // Determine camera ID based on source type
+        if (node.sourceType === 'ip' && config.ipCameraUrl) {
+            // Format IP camera URL as ip_{url}
+            node.cameraId = `ip_${config.ipCameraUrl}`;
+        } else {
+            // Use configured camera ID (USB or test)
+            node.cameraId = config.cameraId || 'test';
+        }
+
         node.apiUrl = config.apiUrl || 'http://localhost:8000';
         node.autoConnect = config.autoConnect || false;
 
