@@ -76,16 +76,6 @@ watch_python_backend() {
     watch_files "$backend_dir" "py,yaml,yml,json" "$restart_cmd" 2
 }
 
-# Watch Node-RED custom nodes
-watch_nodered_nodes() {
-    local nodes_dir="${1:-$PROJECT_ROOT/node-red/nodes}"
-    local restart_cmd="${2:-reload_nodered}"
-
-    log_info "Starting Node-RED nodes file watcher..."
-
-    watch_files "$nodes_dir" "js,html,json" "$restart_cmd" 3
-}
-
 # Reload Python backend (graceful)
 reload_python_backend() {
     log_info "Reloading Python backend..."
@@ -112,23 +102,6 @@ reload_python_backend() {
 
     wait_for_port "$PORT_BACKEND" "Python backend" 10
     log_success "Python backend reloaded"
-}
-
-# Reload Node-RED
-reload_nodered() {
-    log_info "Reloading Node-RED..."
-
-    # First try to reload via API
-    if curl -X POST http://localhost:1880/flows -H "Content-Type: application/json" -d '{"reload":true}' >/dev/null 2>&1; then
-        log_success "Node-RED flows reloaded via API"
-    else
-        # Full restart required for node changes
-        log_info "Performing full Node-RED restart..."
-        stop_node_red
-        start_node_red
-        wait_for_port "$PORT_NODERED" "Node-RED" 15
-        log_success "Node-RED restarted"
-    fi
 }
 
 # Watch configuration files
@@ -158,17 +131,12 @@ reload_on_config_change() {
     if [[ "$changed_file" == *"python"* ]] || [[ "$changed_file" == *"backend"* ]]; then
         reload_python_backend
     fi
-
-    if [[ "$changed_file" == *"node"* ]] || [[ "$changed_file" == *"red"* ]]; then
-        reload_nodered
-    fi
 }
 
 # Multi-watcher manager (runs multiple watchers in background)
 start_watchers() {
     local watch_python="${1:-true}"
-    local watch_nodered="${2:-true}"
-    local watch_config="${3:-true}"
+    local watch_config="${2:-true}"
 
     local pids=()
 
@@ -176,12 +144,6 @@ start_watchers() {
         watch_python_backend &
         pids+=($!)
         log_info "Started Python watcher (PID: ${pids[-1]})"
-    fi
-
-    if [ "$watch_nodered" = true ]; then
-        watch_nodered_nodes &
-        pids+=($!)
-        log_info "Started Node-RED watcher (PID: ${pids[-1]})"
     fi
 
     if [ "$watch_config" = true ]; then
@@ -227,8 +189,6 @@ watch_with_entr() {
 # Export functions for use in other scripts
 export -f watch_files
 export -f watch_python_backend
-export -f watch_nodered_nodes
 export -f reload_python_backend
-export -f reload_nodered
 export -f start_watchers
 export -f stop_watchers

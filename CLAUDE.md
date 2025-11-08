@@ -4,37 +4,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**MachineVisionFlow** is a modular industrial machine vision system inspired by Keyence and Cognex platforms. It provides a distributed architecture combining a FastAPI Python backend for computer vision processing with a Node-RED frontend for visual workflow programming.
+**MachineVisionFlow** is a modular industrial machine vision system inspired by Keyence and Cognex platforms. It provides a REST API backend for computer vision processing with optional Node-RED frontend integration for visual workflow programming.
 
 **Architecture**: Service-oriented with clear separation between API layer, business logic (services), core infrastructure (managers), and vision algorithms.
 
 **Key Components**:
 - **Python Backend** (FastAPI): REST API on port 8000
-- **Node-RED Dashboard**: Visual workflow interface on port 1880
 - **Shared Memory**: Zero-copy image storage with LRU caching
 - **Multi-Camera Support**: USB, IP cameras, and test image sources
+
+**Related Projects**:
+- **Node-RED Custom Nodes**: Located in `../nodered/` directory for visual workflow programming
 
 ## Essential Commands
 
 ### Development
 ```bash
-# Start development mode with auto-reload (Python + Node-RED)
+# Start development mode with auto-reload (Python backend)
 make dev
 
 # Starts uvicorn with --reload for Python backend
-# Starts nodemon for Node-RED with auto-restart on file changes
 # Set MV_CONFIG_FILE to python-backend/config.dev.yaml
 # Uses config.dev.yaml by default (debug mode, verbose logging)
 ```
 
 ### Service Management
 ```bash
-make install    # Install Python venv + Node.js dependencies
-make start      # Start both services (production mode)
-make stop       # Stop both services
-make status     # Check service status
-make reload     # Stop and restart services
-make logs       # Tail service logs (backend.log + node-red.log)
+make install    # Install Python venv dependencies
+make start      # Start backend service (production mode)
+make stop       # Stop backend service
+make status     # Check backend status
+make reload     # Stop and restart backend service
+make logs       # Tail backend logs (backend.log)
 ```
 
 ### Testing
@@ -116,13 +117,9 @@ python-backend/
     ├── template_matching.py # Template matching (+ TemplateMatchParams)
     └── rotation_detection.py # Rotation analysis (+ RotationDetectionParams)
 
-node-red/
-├── nodes/                    # Custom Node-RED nodes
-│   ├── camera/              # mv-camera-capture, mv-image-simulator, mv-live-preview
-│   ├── vision/              # mv-template-match, mv-edge-detect, mv-color-detect, etc.
-│   └── output/              # mv-overlay
-└── flows/                    # Node-RED workflow definitions
 ```
+
+**Note**: Node-RED custom nodes have been moved to `../nodered/` directory.
 
 ### Key Design Patterns
 
@@ -448,65 +445,9 @@ pre_commit install
 
 ## Node-RED Integration
 
-### Backend Configuration
+Node-RED custom nodes are available as a separate package in `../nodered/`. See the [Node-RED README](../nodered/README.md) for installation and usage instructions.
 
-All Machine Vision nodes use a centralized **mv-config** configuration node for backend connectivity:
-
-**Setup (required for all nodes):**
-1. Add an `mv-config` node to your Node-RED workspace (found in config section)
-2. Configure the backend URL (default: `http://localhost:8000`)
-3. Optionally set timeout and credentials
-4. Use "Test Connection" to verify backend is accessible
-
-**Node Configuration:**
-```javascript
-// All MV nodes reference the config node
-defaults: {
-    name: {value: ""},
-    apiConfig: {value: "", type: "mv-config", required: true},
-    // ... other node-specific settings
-}
-```
-
-**API Communication:**
-
-Custom nodes use `vision-utils.js` helper for unified API calls:
-```javascript
-// Example: mv-template-match.js
-const {callVisionAPI, getImageId} = require('../lib/vision-utils');
-
-// Get API config from node
-node.apiConfig = RED.nodes.getNode(config.apiConfig);
-
-// Make API call
-const result = await callVisionAPI({
-    node: node,
-    endpoint: '/api/vision/template-match',
-    requestData: {
-        image_id: msg.image_id,
-        template_id: msg.template_id,
-        roi: msg.roi
-    },
-    apiConfig: node.apiConfig,  // Config node handles URL, timeout, credentials
-    done: done
-});
-```
-
-**Benefits:**
-- Single point of configuration for all nodes
-- Easy environment switching (dev/prod/staging)
-- Built-in connection testing
-- Credentials support (API key, bearer token)
-- Consistent error handling and timeout management
-
-**Backward Compatibility:**
-Nodes still support legacy `apiUrl` field for existing flows. New projects should use `mv-config` node.
-
-Node structure:
-- `nodes/config/mv-config.js`: Configuration node for backend connection
-- `nodes/*/mv-*.js`: Node logic (JavaScript)
-- `nodes/*/mv-*.html`: Node UI definition
-- `nodes/lib/vision-utils.js`: Shared utilities (callVisionAPI, status management)
+The backend exposes all vision processing functionality via REST API endpoints that Node-RED nodes consume.
 
 ## Common Pitfalls
 
@@ -528,5 +469,5 @@ Node structure:
 
 - **FastAPI Docs**: https://fastapi.tiangolo.com/
 - **OpenCV Python**: https://docs.opencv.org/4.x/d6/d00/tutorial_py_root.html
-- **Node-RED Custom Nodes**: https://nodered.org/docs/creating-nodes/
 - **Pydantic Settings**: https://docs.pydantic.dev/latest/concepts/pydantic_settings/
+- **Node-RED Custom Nodes**: See `../nodered/README.md`

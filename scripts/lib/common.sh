@@ -24,14 +24,9 @@ RUN_DIR="${RUN_DIR:-$PROJECT_ROOT/var/run}"
 # Log and PID files
 BACKEND_LOG_FILE="$LOG_DIR/backend.log"
 BACKEND_PID_FILE="$RUN_DIR/backend.pid"
-NODE_RED_LOG_FILE="$LOG_DIR/node-red.log"
-NODE_RED_PID_FILE="$RUN_DIR/node-red.pid"
-
-NODE_RED_USER_DIR="${NODE_RED_USER_DIR:-$HOME/.node-red}"
 
 # Port configuration
 PORT_BACKEND="${PORT_BACKEND:-8000}"
-PORT_NODERED="${PORT_NODERED:-1880}"
 
 # ANSI colors
 RED='\033[0;31m'

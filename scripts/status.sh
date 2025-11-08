@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Machine Vision Flow - Status Script
-# Shows status of all services.
+# Shows status of backend service.
 #
 
 set -euo pipefail
@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/common.sh"
 
-print_banner "Machine Vision Flow - Status" "$BLUE"
+print_banner "Machine Vision Flow Backend - Status" "$BLUE"
 
 echo -e "${BLUE}Python Backend:${NC}"
 if check_port 8000; then
@@ -25,26 +25,10 @@ else
 fi
 
 echo
-echo -e "${BLUE}Node-RED:${NC}"
-if check_port 1880; then
-    echo -e "  Status:  ${GREEN}● Running${NC}"
-    echo -e "  URL:     http://localhost:1880"
-    if [ -f "$NODE_RED_PID_FILE" ]; then
-        echo -e "  PID:     $(cat "$NODE_RED_PID_FILE")"
-    fi
-else
-    echo -e "  Status:  ${RED}○ Stopped${NC}"
-fi
-
-echo
 echo -e "${BLUE}Log Files:${NC}"
 if [ -f "$BACKEND_LOG_FILE" ]; then
     size=$(du -h "$BACKEND_LOG_FILE" | cut -f1)
     echo -e "  Backend: $BACKEND_LOG_FILE ($size)"
-fi
-if [ -f "$NODE_RED_LOG_FILE" ]; then
-    size=$(du -h "$NODE_RED_LOG_FILE" | cut -f1)
-    echo -e "  Node-RED: $NODE_RED_LOG_FILE ($size)"
 fi
 
 echo
@@ -54,20 +38,8 @@ if command -v python3 >/dev/null 2>&1; then
 else
     python_version="missing"
 fi
-if command -v node >/dev/null 2>&1; then
-    node_version=$(node --version 2>/dev/null)
-else
-    node_version="missing"
-fi
-if command -v npm >/dev/null 2>&1; then
-    npm_version=$(npm --version 2>/dev/null)
-else
-    npm_version="missing"
-fi
 
 echo -e "  Python:  $python_version"
-echo -e "  Node:    $node_version"
-echo -e "  npm:     $npm_version"
 
 echo
 echo -e "${BLUE}Cameras:${NC}"
@@ -98,8 +70,8 @@ fi
 
 echo
 echo -e "${BLUE}════════════════════════════════════════${NC}"
-echo -e "  ${GREEN}make start${NC}  - Start all services"
-echo -e "  ${RED}make stop${NC}   - Stop all services"
-echo -e "  ${YELLOW}make reload${NC} - Restart all services"
-echo -e "  ${BLUE}make logs${NC}   - View logs"
+echo -e "  ${GREEN}make start${NC}  - Start backend service"
+echo -e "  ${RED}make stop${NC}   - Stop backend service"
+echo -e "  ${YELLOW}make reload${NC} - Restart backend service"
+echo -e "  ${BLUE}make logs${NC}   - View backend logs"
 echo -e "${BLUE}════════════════════════════════════════${NC}"

@@ -7,7 +7,7 @@ After=network.target
 Type=forking
 User=cnc
 Group=cnc
-WorkingDirectory=/home/cnc/MachineVisionFlow/python-backend
+WorkingDirectory=/home/cnc/machine-vision/backend/python-backend
 
 # Runtime directories (systemd creates these with correct permissions)
 RuntimeDirectory=machinevisionflow
@@ -16,10 +16,10 @@ LogsDirectory=machinevisionflow
 # Environment variables for production paths
 Environment="LOG_DIR=/var/log/machinevisionflow"
 Environment="RUN_DIR=/run/machinevisionflow"
-Environment="MV_CONFIG_FILE=/home/cnc/MachineVisionFlow/python-backend/config.yaml"
+Environment="MV_CONFIG_FILE=/home/cnc/machine-vision/backend/python-backend/config.yaml"
 
 # Start command
-ExecStart=/home/cnc/MachineVisionFlow/python-backend/venv/bin/python main.py
+ExecStart=/home/cnc/machine-vision/backend/python-backend/venv/bin/python main.py
 ExecStop=/bin/kill -TERM $MAINPID
 
 # PID file

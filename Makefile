@@ -12,40 +12,36 @@ RUN_DIR ?= $(PROJECT_ROOT)/var/run
 
 BACKEND_PID_FILE := $(RUN_DIR)/backend.pid
 BACKEND_LOG_FILE := $(LOG_DIR)/backend.log
-NODE_RED_PID_FILE := $(RUN_DIR)/node-red.pid
-NODE_RED_LOG_FILE := $(LOG_DIR)/node-red.log
 PYTHON := python3
 PORT_BACKEND := 8000
-PORT_NODERED := 1880
 
 ARGS ?=
 
 .PHONY: help install start stop status test clean reload logs format lint setup-hooks dev
 
 help:
-	@echo "Machine Vision Flow - Core Commands"
+	@echo "Machine Vision Flow Backend - Core Commands"
 	@echo "===================================="
 	@echo ""
-	@echo "  make install       Install dependencies"
-	@echo "  make start         Start services"
-	@echo "  make stop          Stop services"
-	@echo "  make status        Show status"
-	@echo "  make test          Run tests"
+	@echo "  make install       Install Python dependencies"
+	@echo "  make start         Start backend service"
+	@echo "  make stop          Stop backend service"
+	@echo "  make status        Show backend status"
+	@echo "  make test          Run Python tests"
 	@echo "  make clean         Clean runtime files (--all for everything)"
-	@echo "  make reload        Reload services"
-	@echo "  make logs          View logs"
+	@echo "  make reload        Reload backend service"
+	@echo "  make logs          View backend logs"
 	@echo ""
-	@echo "Development (use VSCode for debugging - see .vscode/README.md):"
-	@echo "  make dev           Start with auto-reload (Python + Node-RED)"
+	@echo "Development (use VSCode for debugging - see ../.vscode/):"
+	@echo "  make dev           Start with auto-reload (Python backend)"
 	@echo "  make setup-hooks   Install pre-commit hooks"
 	@echo "  make format        Format Python code (black, isort)"
 	@echo "  make lint          Lint Python code (flake8)"
 
 install:
-	@echo "Installing dependencies..."
+	@echo "Installing Python backend dependencies..."
 	@chmod +x $(SCRIPTS_DIR)/*.sh $(SCRIPTS_DIR)/lib/*.sh
 	@$(SHELL) -lc "source \"$(SCRIPTS_DIR)/lib/services.sh\"; ensure_python_backend_env false"
-	@$(SHELL) -lc "source \"$(SCRIPTS_DIR)/lib/services.sh\"; ensure_node_red_dependencies false"
 	@echo "Installation complete!"
 
 start:
@@ -58,10 +54,10 @@ status:
 	@$(SCRIPTS_DIR)/status.sh $(ARGS)
 
 logs:
-	@if [ -f $(BACKEND_LOG_FILE) ] || [ -f $(NODE_RED_LOG_FILE) ]; then \
-		tail -f $(BACKEND_LOG_FILE) $(NODE_RED_LOG_FILE) 2>/dev/null; \
+	@if [ -f $(BACKEND_LOG_FILE) ]; then \
+		tail -f $(BACKEND_LOG_FILE) 2>/dev/null; \
 	else \
-		echo "No log files found. Start services first with: make start"; \
+		echo "No log file found. Start backend first with: make start"; \
 	fi
 
 clean:
@@ -74,7 +70,7 @@ ifeq ($(filter --all,$(MAKECMDGOALS)),--all)
 	@rm -rf $(BACKEND_DIR)/htmlcov $(BACKEND_DIR)/.coverage $(BACKEND_DIR)/.pytest_cache
 	@find $(BACKEND_DIR)/data -mindepth 1 ! -name 'README.md' -delete 2>/dev/null || true
 	@find $(BACKEND_DIR)/templates -mindepth 1 -delete 2>/dev/null || true
-	@rm -rf $(PROJECT_ROOT)/node-red/node_modules
+	@rm -rf $(BACKEND_DIR)/venv
 	@echo "Complete cleanup done!"
 else
 	@echo "Runtime cleanup complete! (Use 'make clean --all' for full cleanup)"
@@ -117,19 +113,12 @@ lint:
 	@echo "Linting complete!"
 
 dev:
-	@echo "Starting development mode with auto-reload..."
+	@echo "Starting Python backend development mode with auto-reload..."
 	@echo ""
 	@echo "Python backend: Auto-reloads on .py changes (uvicorn --reload)"
-	@echo "Node-RED: Auto-restarts on .js/.html changes (nodemon)"
 	@echo ""
-	@echo "Press Ctrl+C to stop both services"
+	@echo "Press Ctrl+C to stop the service"
 	@echo ""
-	@$(SHELL) -lc "source \"$(SCRIPTS_DIR)/lib/services.sh\"; ensure_node_red_dependencies false"
-	@trap 'pkill -f \"nodemon.*node-red\" || pkill -f node-red; exit 0' INT TERM; \
-		cd node-red && npx nodemon --exec node-red & \
-		NODERED_PID=$$!; \
-		cd $(BACKEND_DIR) && \
+	@cd $(BACKEND_DIR) && \
 		export MV_CONFIG_FILE=$(BACKEND_DIR)/config.dev.yaml && \
-		$(BACKEND_PYTHON) -m uvicorn main:app --reload --host=0.0.0.0 --port=$(PORT_BACKEND) & \
-		BACKEND_PID=$$!; \
-		wait $$NODERED_PID $$BACKEND_PID
+		$(BACKEND_PYTHON) -m uvicorn main:app --reload --host=0.0.0.0 --port=$(PORT_BACKEND)
