@@ -1,0 +1,16 @@
+Source: machinevision
+Section: misc
+Priority: optional
+Maintainer: Machine Vision Team <support@example.com>
+Build-Depends: debhelper (>= 10), python3 (>= 3.9), python3-venv, python3-pip
+Standards-Version: 4.5.0
+
+Package: machinevision
+Architecture: all
+Depends: ${misc:Depends}, python3 (>= 3.9), python3-pip, systemd
+Recommends: python3-opencv
+Description: Machine Vision Flow Backend
+ FastAPI-based backend for computer vision processing.
+ Provides REST API for camera operations, image processing,
+ and various vision algorithms including edge detection,
+ color detection, ArUco markers, and template matching.

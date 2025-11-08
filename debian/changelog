@@ -1,0 +1,10 @@
+machinevision (1.0.0) stable; urgency=medium
+
+  * Initial release
+  * Lightweight package without bundled Python dependencies
+  * Uses system Python instead of virtualenv
+  * Automatic dependency checking during installation
+  * Package size: 74 KB (vs 58 MB with bundled deps)
+  * Requires pre-installed Python dependencies on target system
+
+ -- Machine Vision Team <support@example.com>  Fri, 08 Nov 2025 20:30:00 +0000

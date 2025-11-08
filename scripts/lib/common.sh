@@ -14,7 +14,7 @@ PROJECT_ROOT="$(dirname "$SCRIPTS_DIR")"
 
 # Project paths
 BACKEND_DIR="$PROJECT_ROOT/python-backend"
-BACKEND_VENV_DIR="$BACKEND_DIR/venv"
+BACKEND_VENV_DIR="$(dirname "$PROJECT_ROOT")/venv"
 BACKEND_SENTINEL="$BACKEND_DIR/.deps_installed"
 
 # Runtime directories (fallback to project var/ for development)

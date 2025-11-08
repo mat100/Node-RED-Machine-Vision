@@ -1,0 +1,46 @@
+#!/bin/bash
+set -e
+
+# This script is run after removal
+
+case "$1" in
+    purge)
+        # Complete removal - clean up everything
+        echo "Purging machinevision data..."
+
+        # Disable and remove systemd service
+        if [ -f /etc/systemd/system/machinevision.service ]; then
+            systemctl disable machinevision.service || true
+            rm -f /etc/systemd/system/machinevision.service
+            systemctl daemon-reload
+        fi
+
+        # Remove user data (but keep backups)
+        rm -rf /var/lib/machinevision
+        rm -rf /var/log/machinevision
+
+        # Remove user
+        if id -u machinevision > /dev/null 2>&1; then
+            deluser --system machinevision || true
+        fi
+
+        echo "Machine Vision Backend purged."
+        echo "Backups are kept in /var/backups/machinevision"
+        ;;
+
+    remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+        # Don't remove data on remove, only on purge
+        if [ "$1" = "remove" ]; then
+            # Disable service but keep it for potential reinstall
+            systemctl disable machinevision.service || true
+            echo "Service disabled. Data preserved in /var/lib/machinevision"
+        fi
+        ;;
+
+    *)
+        echo "postrm called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

@@ -1,0 +1,8 @@
+# Build artifacts - generated during dpkg-buildpackage
+.debhelper/
+machinevision/
+files
+*.substvars
+*.log
+debhelper-build-stamp
+*.debhelper

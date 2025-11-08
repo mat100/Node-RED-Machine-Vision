@@ -1,0 +1,27 @@
+[Unit]
+Description=Machine Vision Backend
+After=network.target
+
+[Service]
+Type=simple
+User=machinevision
+Group=machinevision
+WorkingDirectory=/usr/lib/machinevision/python-backend
+Environment="PYTHONPATH=/usr/lib/machinevision/python-backend"
+Environment="MV_CONFIG_FILE=/etc/machinevision/config.yaml"
+ExecStart=/usr/bin/python3 /usr/lib/machinevision/python-backend/main.py
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/machinevision /var/log/machinevision
+ReadOnlyPaths=/etc/machinevision
+
+[Install]
+WantedBy=multi-user.target

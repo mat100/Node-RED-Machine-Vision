@@ -1,0 +1,25 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	# Skip make install - we use dh_install instead
+	# (make install creates venv which we don't want in package)
+	dh_install
+	# Remove venv if it exists (should not be in package)
+	rm -rf debian/machinevision/usr/lib/machinevision/python-backend/venv
+	# Remove __pycache__ and .pyc files
+	find debian/machinevision/usr/lib/machinevision/python-backend -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	find debian/machinevision/usr/lib/machinevision/python-backend -type f -name "*.pyc" -delete 2>/dev/null || true
+	# Create necessary directories
+	mkdir -p debian/machinevision/var/lib/machinevision/data
+	mkdir -p debian/machinevision/var/lib/machinevision/templates
+	mkdir -p debian/machinevision/var/log/machinevision
+	mkdir -p debian/machinevision/var/backups/machinevision
+
+override_dh_auto_build:
+	# Skip build step - Python app requires no compilation
+
+override_dh_auto_test:
+	# Skip tests during package build

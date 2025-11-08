@@ -1,0 +1,64 @@
+#!/bin/bash
+set -e
+
+# This script is run after installation/upgrade
+
+case "$1" in
+    configure)
+        # Create system user if it doesn't exist
+        if ! id -u machinevision > /dev/null 2>&1; then
+            echo "Creating machinevision user..."
+            useradd --system --home-dir /var/lib/machinevision --no-create-home \
+                    --shell /usr/sbin/nologin --comment "Machine Vision Service" \
+                    --user-group machinevision
+        fi
+
+        # Check Python dependencies
+        echo "Checking Python dependencies..."
+        if ! /usr/lib/machinevision/check-python-deps.sh /usr/lib/machinevision/python-backend/requirements.txt; then
+            echo ""
+            echo "ERROR: Python dependencies are missing!" >&2
+            echo "Installation cannot continue." >&2
+            exit 1
+        fi
+
+        # Set ownership and permissions
+        chown -R machinevision:machinevision /usr/lib/machinevision
+        chown -R machinevision:machinevision /var/lib/machinevision
+        chown -R machinevision:machinevision /var/log/machinevision
+        chmod 755 /usr/lib/machinevision
+        chmod 755 /var/lib/machinevision
+        chmod 755 /var/log/machinevision
+        chmod 644 /etc/machinevision/config.yaml
+
+        # Install systemd service
+        if [ -f /usr/lib/machinevision/machinevision.service ]; then
+            cp /usr/lib/machinevision/machinevision.service /etc/systemd/system/
+            systemctl daemon-reload
+            systemctl enable machinevision.service
+
+            # Start service if not upgrading
+            if [ -z "$2" ]; then
+                echo "Starting machinevision service..."
+                systemctl start machinevision.service
+            else
+                echo "Restarting machinevision service..."
+                systemctl restart machinevision.service
+            fi
+        fi
+
+        echo "Machine Vision Backend installed successfully!"
+        echo "Use 'machinevision' command to manage the service."
+        ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+        :
+        ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

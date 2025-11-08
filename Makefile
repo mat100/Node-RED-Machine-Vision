@@ -3,7 +3,7 @@ SHELL := /bin/bash
 PROJECT_ROOT := $(CURDIR)
 SCRIPTS_DIR := $(PROJECT_ROOT)/scripts
 BACKEND_DIR := $(PROJECT_ROOT)/python-backend
-BACKEND_VENV := $(BACKEND_DIR)/venv
+BACKEND_VENV := $(shell dirname $(PROJECT_ROOT))/venv
 BACKEND_PYTHON := $(BACKEND_VENV)/bin/python
 
 # Runtime directories (fallback to project var/ for development)
@@ -17,7 +17,7 @@ PORT_BACKEND := 8000
 
 ARGS ?=
 
-.PHONY: help install start stop status test clean reload logs format lint setup-hooks dev
+.PHONY: help install start stop status test clean reload logs format lint setup-hooks dev deb deb-clean
 
 help:
 	@echo "Machine Vision Flow Backend - Core Commands"
@@ -37,6 +37,10 @@ help:
 	@echo "  make setup-hooks   Install pre-commit hooks"
 	@echo "  make format        Format Python code (black, isort)"
 	@echo "  make lint          Lint Python code (flake8)"
+	@echo ""
+	@echo "Packaging:"
+	@echo "  make deb           Build DEB package"
+	@echo "  make deb-clean     Clean DEB build artifacts"
 
 install:
 	@echo "Installing Python backend dependencies..."
@@ -122,3 +126,19 @@ dev:
 	@cd $(BACKEND_DIR) && \
 		export MV_CONFIG_FILE=$(BACKEND_DIR)/config.dev.yaml && \
 		$(BACKEND_PYTHON) -m uvicorn main:app --reload --host=0.0.0.0 --port=$(PORT_BACKEND)
+
+# DEB packaging
+deb:
+	@echo "Building DEB package..."
+	@chmod +x $(PROJECT_ROOT)/packaging/build-deb.sh
+	@$(PROJECT_ROOT)/packaging/build-deb.sh
+
+deb-clean:
+	@echo "Cleaning DEB build artifacts..."
+	@rm -rf $(PROJECT_ROOT)/debian/.debhelper $(PROJECT_ROOT)/debian/machinevision
+	@rm -f $(PROJECT_ROOT)/debian/files $(PROJECT_ROOT)/debian/*.substvars
+	@rm -f $(PROJECT_ROOT)/debian/*.debhelper $(PROJECT_ROOT)/debian/*.log
+	@rm -f $(PROJECT_ROOT)/debian/debhelper-build-stamp
+	@rm -f $(PROJECT_ROOT)/../*.deb $(PROJECT_ROOT)/../*.changes $(PROJECT_ROOT)/../*.buildinfo
+	@rm -rf $(PROJECT_ROOT)/build
+	@echo "DEB build artifacts cleaned!"

@@ -1,0 +1,44 @@
+#!/bin/bash
+set -e
+
+# This script is run before installation/upgrade
+
+case "$1" in
+    upgrade)
+        # Create backup during upgrade
+        if [ -d /usr/lib/machinevision ]; then
+            BACKUP_DIR="/var/backups/machinevision"
+            TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+            OLD_VERSION="$2"
+
+            echo "Creating backup of version $OLD_VERSION to $BACKUP_DIR/backup-$TIMESTAMP"
+            mkdir -p "$BACKUP_DIR"
+
+            # Backup application files
+            if [ -d /usr/lib/machinevision ]; then
+                tar -czf "$BACKUP_DIR/backup-$TIMESTAMP-app.tar.gz" -C /usr/lib machinevision 2>/dev/null || true
+            fi
+
+            # Backup configuration
+            if [ -d /etc/machinevision ]; then
+                tar -czf "$BACKUP_DIR/backup-$TIMESTAMP-config.tar.gz" -C /etc machinevision 2>/dev/null || true
+            fi
+
+            # Keep only last 3 backups
+            cd "$BACKUP_DIR"
+            ls -t backup-*-app.tar.gz 2>/dev/null | tail -n +4 | xargs -r rm -f
+            ls -t backup-*-config.tar.gz 2>/dev/null | tail -n +4 | xargs -r rm -f
+
+            echo "$OLD_VERSION" > "$BACKUP_DIR/backup-$TIMESTAMP.version"
+        fi
+        ;;
+    install)
+        # Fresh installation
+        :
+        ;;
+    *)
+        :
+        ;;
+esac
+
+exit 0
