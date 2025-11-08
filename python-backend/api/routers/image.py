@@ -3,6 +3,7 @@ Image API Router - Image processing operations
 """
 
 import logging
+from datetime import datetime
 
 import cv2
 from fastapi import APIRouter, Depends
@@ -10,7 +11,7 @@ from fastapi import APIRouter, Depends
 from api.dependencies import get_image_service
 from api.exceptions import safe_endpoint
 from core.image.converters import encode_image_to_base64
-from schemas import ROIExtractRequest, ROIExtractResponse
+from schemas import ImageImportRequest, ImageImportResponse, ROIExtractRequest, ROIExtractResponse
 
 logger = logging.getLogger(__name__)
 
@@ -75,3 +76,46 @@ async def extract_roi(
     )
 
     return ROIExtractResponse(success=True, thumbnail=thumbnail, bounding_box=clipped_bbox)
+
+
+@router.post("/import")
+@safe_endpoint
+async def import_image(
+    request: ImageImportRequest, image_service=Depends(get_image_service)
+) -> ImageImportResponse:
+    """
+    Import image from file system.
+
+    Loads an image from the file system (JPG, PNG, BMP, etc.), stores it in
+    ImageManager, and generates a thumbnail. This allows external applications
+    to register their images for processing by vision nodes.
+
+    The response structure matches CameraCaptureResponse for compatibility
+    with existing Node-RED vision blocks.
+
+    Args:
+        request: Import request with file path
+        image_service: Image service dependency
+
+    Returns:
+        ImageImportResponse with image_id and thumbnail (same as camera capture)
+
+    Raises:
+        HTTPException 404: If file not found
+        HTTPException 400: If file cannot be loaded as image
+    """
+    # Import from file (service handles validation and errors)
+    image_id, thumbnail_base64, metadata = image_service.import_from_file(request.file_path)
+
+    logger.info(
+        f"Image imported: {image_id} from {request.file_path} "
+        f"({metadata['width']}x{metadata['height']})"
+    )
+
+    return ImageImportResponse(
+        success=True,
+        image_id=image_id,
+        timestamp=datetime.now(),
+        thumbnail_base64=thumbnail_base64,
+        metadata=metadata,
+    )

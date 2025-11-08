@@ -53,7 +53,7 @@ from .camera import (
 from .common import ROI, Point, Size, VisionObject, VisionResponse
 
 # Image processing models
-from .image import ROIExtractRequest, ROIExtractResponse
+from .image import ImageImportRequest, ImageImportResponse, ROIExtractRequest, ROIExtractResponse
 
 # System models
 from .system import DebugSettings, PerformanceMetrics, SystemStatus
@@ -101,6 +101,8 @@ __all__ = [
     # Image models
     "ROIExtractRequest",
     "ROIExtractResponse",
+    "ImageImportRequest",
+    "ImageImportResponse",
     # Enums (re-exported from core.enums)
     "AngleRange",
     "ArucoDict",

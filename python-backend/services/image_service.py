@@ -6,8 +6,10 @@ retrieval, processing, and metadata management.
 """
 
 import logging
+import os
 from typing import Dict, Optional, Tuple
 
+import cv2
 import numpy as np
 
 from api.exceptions import ImageNotFoundException
@@ -67,6 +69,60 @@ class ImageService:
         image_id = self.image_manager.store(image, metadata or {})
         logger.debug(f"Image stored: {image_id}")
         return image_id
+
+    def import_from_file(self, file_path: str) -> Tuple[str, str, Dict]:
+        """
+        Import image from file system.
+
+        Loads an image from the file system (JPG, PNG, BMP, etc.),
+        stores it in ImageManager, and generates a thumbnail.
+
+        Args:
+            file_path: Path to image file (can be in /dev/shm or regular filesystem)
+
+        Returns:
+            Tuple of (image_id, thumbnail_base64, metadata)
+
+        Raises:
+            FileNotFoundError: If file does not exist
+            ValueError: If file cannot be loaded as image
+        """
+        # Validate file exists
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Image file not found: {file_path}")
+
+        # Load image with OpenCV
+        image = cv2.imread(file_path, cv2.IMREAD_COLOR)
+        if image is None:
+            raise ValueError(f"Failed to load image from: {file_path}")
+
+        # Extract metadata
+        height, width = image.shape[:2]
+        channels = image.shape[2] if len(image.shape) > 2 else 1
+        file_size = os.path.getsize(file_path)
+
+        metadata = {
+            "source": "file_import",
+            "file_path": file_path,
+            "width": width,
+            "height": height,
+            "channels": channels,
+            "file_size_bytes": file_size,
+        }
+
+        # Store in ImageManager
+        image_id = self.image_manager.store(image, metadata)
+
+        # Generate thumbnail
+        _, thumbnail_base64 = self.image_manager.create_thumbnail(
+            image, width=None, image_id=image_id
+        )
+
+        logger.info(
+            f"Imported image from {file_path}: {image_id} ({width}x{height}, {file_size} bytes)"
+        )
+
+        return image_id, thumbnail_base64, metadata
 
     def get_image_with_thumbnail(
         self, image_id: str, thumbnail_width: int = ImageConstants.DEFAULT_THUMBNAIL_WIDTH

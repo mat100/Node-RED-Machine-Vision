@@ -44,7 +44,7 @@
     {
       "label": "Stop Node-RED",
       "type": "shell",
-      "command": "pkill -f 'nodemon.*node-red' || pkill -f node-red || true",
+      "command": "pkill -f 'nodemon.*node-red' 2>/dev/null; pkill -f 'node-red' 2>/dev/null; PID=$(lsof -ti:1880 2>/dev/null); [ -n \"$PID\" ] && kill $PID 2>/dev/null; sleep 0.5; pkill -9 -f 'nodemon.*node-red' 2>/dev/null; pkill -9 -f 'node-red' 2>/dev/null; true",
       "problemMatcher": [],
       "presentation": {
         "reveal": "never",
