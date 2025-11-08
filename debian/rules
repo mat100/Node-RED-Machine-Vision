@@ -8,7 +8,7 @@ override_dh_auto_install:
 	# (make install creates venv which we don't want in package)
 	dh_install
 	# Remove venv if it exists (should not be in package)
-	rm -rf debian/machinevision/usr/lib/machinevision/python-backend/venv
+	rm -rf debian/machinevision/usr/lib/machinevision/python-backend/.venv
 	# Remove __pycache__ and .pyc files
 	find debian/machinevision/usr/lib/machinevision/python-backend -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find debian/machinevision/usr/lib/machinevision/python-backend -type f -name "*.pyc" -delete 2>/dev/null || true

@@ -107,11 +107,7 @@ prepare_build() {
     # Update VERSION file in package
     echo "$version" > "$SCRIPT_DIR/VERSION"
 
-    # Remove venv from source (will not be in package)
-    print_info "Removing venv from source tree..."
-    rm -rf "$BACKEND_DIR/python-backend/venv"
-
-    # Remove __pycache__ and .pyc files
+    # Remove __pycache__ and .pyc files from source
     find "$BACKEND_DIR/python-backend" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
     find "$BACKEND_DIR/python-backend" -type f -name "*.pyc" -delete 2>/dev/null || true
 

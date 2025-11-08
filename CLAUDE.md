@@ -18,50 +18,49 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Essential Commands
 
+### Setup
+```bash
+make install      # Create venv and install all dependencies
+make setup-hooks  # Install pre-commit hooks (recommended)
+```
+
+Virtual environment is created at `python-backend/.venv`.
+
 ### Development
 ```bash
-# Start development mode with auto-reload (Python backend)
+# Start development mode with auto-reload
 make dev
 
 # Starts uvicorn with --reload for Python backend
-# Set MV_CONFIG_FILE to python-backend/config.dev.yaml
 # Uses config.dev.yaml by default (debug mode, verbose logging)
-```
-
-### Service Management
-```bash
-make install    # Install Python venv dependencies
-make start      # Start backend service (production mode)
-make stop       # Stop backend service
-make status     # Check backend status
-make reload     # Stop and restart backend service
-make logs       # Tail backend logs (backend.log)
+# API docs available at http://localhost:8000/docs
 ```
 
 ### Testing
 ```bash
-# Run all tests
-make test
-# Or directly:
-cd python-backend && source venv/bin/activate && python -m pytest tests/ -v
+make test         # Run all tests
+make test-fast    # Run fast tests only (skip slow)
+make test-watch   # Watch mode for TDD
+make cov          # Run tests with coverage report
+
+# Or directly (activate venv first):
+source python-backend/.venv/bin/activate
+pytest tests/ -v
 
 # Run specific test file
-python -m pytest tests/api/test_vision_api.py -v
+pytest tests/api/test_vision_api.py -v
 
-# Run with coverage
-python -m pytest tests/ --cov=. --cov-report=html
-
-# Test markers available: unit, integration, slow
-python -m pytest -m "not slow" tests/
+# Test markers available: slow, integration
+pytest -m "not slow" tests/
 ```
 
 ### Code Quality
 ```bash
-make format       # Run black + isort on Python code
-make lint         # Run flake8 linting
-make setup-hooks  # Install pre-commit hooks
+make format       # Format code (black + isort)
+make lint         # Lint code (flake8)
+make check        # Run lint + tests (pre-push check)
 
-# Pre-commit runs automatically on git commit with:
+# Pre-commit runs automatically on git commit:
 # - black (line-length=100)
 # - isort (--profile=black)
 # - flake8 (--extend-ignore=E203,W503)
@@ -69,14 +68,26 @@ make setup-hooks  # Install pre-commit hooks
 # - check-yaml, check-merge-conflict
 ```
 
+### Cleanup
+```bash
+make clean        # Remove caches and build artifacts
+make clean-all    # Also remove venv
+```
+
 ### Environment Setup
 ```bash
-# Development uses config.dev.yaml (debug mode)
-export MV_CONFIG_FILE=/home/cnc/MachineVisionFlow/python-backend/config.dev.yaml
+# Development automatically uses config.dev.yaml
+make dev
+
+# Override config file
+MV_CONFIG_FILE=/path/to/config.yaml make dev
 
 # Production uses config.yaml (if it exists) or defaults
 # Config precedence: env vars > YAML file > defaults
 ```
+
+### Production Deployment
+Production deployment uses systemd (configured in DEB package). Development commands (make dev, etc.) are for local development only. See `DEVELOPMENT.md` for full workflow guide.
 
 ## Architecture Highlights
 
@@ -398,7 +409,6 @@ All routers should use `@safe_endpoint` decorator for consistent error handling.
 
 **Development mode** (`make dev`):
 - Python backend: Auto-reloads on `.py` changes (uvicorn --reload)
-- Node-RED: Auto-restarts on `.js`/`.html` changes (nodemon)
 - Logs to console with DEBUG level
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
@@ -410,6 +420,11 @@ curl http://localhost:8000/api/system/info
 ```
 
 **Inspect shared memory**:
+```bash
+# Activate venv and run Python shell
+source python-backend/.venv/bin/activate
+python
+```
 ```python
 # In Python shell
 from core.image_manager import ImageManager
@@ -418,13 +433,8 @@ print(mgr.list_images())
 print(mgr.get_stats())
 ```
 
-**View logs**:
-```bash
-make logs  # Tail both backend and Node-RED logs
-# Or individually:
-tail -f var/log/backend.log
-tail -f var/log/node-red.log
-```
+**VS Code debugging**:
+Launch configurations available in `.vscode/launch.json`. Set breakpoints and press F5.
 
 ### Pre-commit Hooks
 
@@ -435,13 +445,12 @@ Hooks enforce code quality before commits:
 - **trailing-whitespace**, **end-of-file-fixer**: Cleanup
 - **check-yaml**, **check-merge-conflict**: Safety checks
 
-Install with `make setup-hooks` or manually:
+Install with:
 ```bash
-cd python-backend
-source venv/bin/activate
-pip install pre-commit black isort flake8
-pre_commit install
+make setup-hooks
 ```
+
+All required tools are included in `requirements-dev.txt`.
 
 ## Node-RED Integration
 
@@ -451,11 +460,12 @@ The backend exposes all vision processing functionality via REST API endpoints t
 
 ## Common Pitfalls
 
-1. **Image not in cache**: Images evicted by LRU. Increase `max_images` or `max_memory_mb` in config.
-2. **ROI out of bounds**: Always validate ROI against image dimensions before processing.
-3. **Camera connection fails**: Check camera permissions, USB enumeration, or use `test` camera for development.
-4. **Import errors**: Ensure `python-backend/` is in PYTHONPATH or run from that directory.
-5. **Config not loaded**: Set `MV_CONFIG_FILE` env var before starting services.
+1. **"Error: venv not found"**: Run `make install` first to create the virtual environment.
+2. **Import errors**: Always run commands through make (which activates venv), or manually activate: `source python-backend/.venv/bin/activate`
+3. **Image not in cache**: Images evicted by LRU. Increase `max_images` or `max_memory_mb` in config.
+4. **ROI out of bounds**: Always validate ROI against image dimensions before processing.
+5. **Camera connection fails**: Check camera permissions, USB enumeration, or use `test` camera for development.
+6. **Config not loaded**: Set `MV_CONFIG_FILE` env var before starting services (or use `make dev` which sets it automatically).
 
 ## Performance Considerations
 

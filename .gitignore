@@ -37,6 +37,7 @@ Thumbs.db
 
 # Project specific
 python-backend/venv/
+python-backend/.venv/
 python-backend/.deps_installed
 
 # Runtime files
