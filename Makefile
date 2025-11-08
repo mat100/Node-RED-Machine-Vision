@@ -1,15 +1,15 @@
 SHELL := /bin/bash
 
 PROJECT_ROOT := $(CURDIR)
-BACKEND_DIR := $(PROJECT_ROOT)/python-backend
-VENV := $(BACKEND_DIR)/.venv
+BACKEND_DIR := $(PROJECT_ROOT)/src
+VENV := $(PROJECT_ROOT)/.venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 PYTEST := $(VENV)/bin/pytest
 
 # Configuration
 PORT := 8000
-CONFIG_FILE := $(BACKEND_DIR)/config.dev.yaml
+CONFIG_FILE := $(PROJECT_ROOT)/config/config.dev.yaml
 
 .PHONY: help install dev test test-fast test-watch cov check format lint setup-hooks clean deb deb-clean
 
@@ -52,7 +52,7 @@ install:
 	@test -d $(VENV) || python3 -m venv $(VENV)
 	@echo "Installing dependencies..."
 	@$(PIP) install --upgrade pip
-	@$(PIP) install -r $(BACKEND_DIR)/requirements-dev.txt
+	@$(PIP) install -r $(PROJECT_ROOT)/requirements-dev.txt
 	@echo ""
 	@echo "✓ Installation complete!"
 	@echo "  Activate venv: source $(VENV)/bin/activate"
@@ -87,25 +87,25 @@ dev:
 test:
 	@test -d $(VENV) || (echo "Error: venv not found. Run 'make install' first." && exit 1)
 	@echo "Running all tests..."
-	@cd $(BACKEND_DIR) && $(PYTEST) tests/ -v
+	@cd $(PROJECT_ROOT) && PYTHONPATH=$(BACKEND_DIR) $(PYTEST) tests/ -v
 
 test-fast:
 	@test -d $(VENV) || (echo "Error: venv not found. Run 'make install' first." && exit 1)
 	@echo "Running fast tests (skipping slow tests)..."
-	@cd $(BACKEND_DIR) && $(PYTEST) tests/ -v -m "not slow"
+	@cd $(PROJECT_ROOT) && PYTHONPATH=$(BACKEND_DIR) $(PYTEST) tests/ -v -m "not slow"
 
 test-watch:
 	@test -d $(VENV) || (echo "Error: venv not found. Run 'make install' first." && exit 1)
 	@echo "Starting test watch mode (TDD)..."
-	@cd $(BACKEND_DIR) && $(PYTHON) -m pytest_watch tests/ -- -v
+	@cd $(PROJECT_ROOT) && PYTHONPATH=$(BACKEND_DIR) $(PYTHON) -m pytest_watch tests/ -- -v
 
 cov:
 	@test -d $(VENV) || (echo "Error: venv not found. Run 'make install' first." && exit 1)
 	@echo "Running tests with coverage..."
-	@cd $(BACKEND_DIR) && $(PYTEST) tests/ --cov=. --cov-report=html --cov-report=term
+	@cd $(PROJECT_ROOT) && PYTHONPATH=$(BACKEND_DIR) $(PYTEST) tests/ --cov=src --cov-report=html --cov-report=term
 	@echo ""
-	@echo "✓ Coverage report generated: $(BACKEND_DIR)/htmlcov/index.html"
-	@command -v xdg-open >/dev/null 2>&1 && xdg-open $(BACKEND_DIR)/htmlcov/index.html || true
+	@echo "✓ Coverage report generated: $(PROJECT_ROOT)/htmlcov/index.html"
+	@command -v xdg-open >/dev/null 2>&1 && xdg-open $(PROJECT_ROOT)/htmlcov/index.html || true
 
 # ============================================
 # Code Quality
@@ -136,9 +136,9 @@ clean:
 	@echo "Cleaning build artifacts and caches..."
 	@find $(BACKEND_DIR) -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	@find $(BACKEND_DIR) -type f -name "*.pyc" -delete 2>/dev/null || true
-	@rm -rf $(BACKEND_DIR)/.pytest_cache
-	@rm -rf $(BACKEND_DIR)/htmlcov
-	@rm -rf $(BACKEND_DIR)/.coverage
+	@rm -rf $(PROJECT_ROOT)/.pytest_cache
+	@rm -rf $(PROJECT_ROOT)/htmlcov
+	@rm -rf $(PROJECT_ROOT)/.coverage
 	@rm -rf $(PROJECT_ROOT)/var/log $(PROJECT_ROOT)/var/run
 	@echo "✓ Cleanup complete!"
 

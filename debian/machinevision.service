@@ -6,10 +6,10 @@ After=network.target
 Type=simple
 User=machinevision
 Group=machinevision
-WorkingDirectory=/usr/lib/machinevision/python-backend
-Environment="PYTHONPATH=/usr/lib/machinevision/python-backend"
+WorkingDirectory=/usr/lib/machinevision/src
+Environment="PYTHONPATH=/usr/lib/machinevision/src"
 Environment="MV_CONFIG_FILE=/etc/machinevision/config.yaml"
-ExecStart=/usr/bin/python3 /usr/lib/machinevision/python-backend/main.py
+ExecStart=/usr/bin/python3 /usr/lib/machinevision/src/main.py
 Restart=on-failure
 RestartSec=5s
 StandardOutput=journal

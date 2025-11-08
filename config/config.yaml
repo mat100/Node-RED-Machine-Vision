@@ -1,7 +1,7 @@
 # Machine Vision Flow Configuration
 
 server:
-  host: "0.0.0.0"
+  host: 0.0.0.0
   port: 8000
   debug: true
 
@@ -26,9 +26,9 @@ preview:
   timeout_minutes: 5       # Auto-stop stream after inactivity
 
 template:
-  storage_path: "./templates"
+  storage_path: ./templates
   max_file_size_mb: 10
-  supported_formats: ["png", "jpg", "jpeg"]
+  supported_formats: [png, jpg, jpeg]
 
 history:
   max_inspections: 100
@@ -36,7 +36,7 @@ history:
 
 vision:
   template_matching:
-    default_method: "TM_CCOEFF_NORMED"
+    default_method: TM_CCOEFF_NORMED
     default_threshold: 0.8
     multi_scale_steps: 20
     scale_range: [0.8, 1.2]
@@ -48,5 +48,5 @@ performance:
 
 debug:
   save_debug_images: false
-  debug_output_path: "./debug"
+  debug_output_path: ./debug
   show_overlays: true

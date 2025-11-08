@@ -63,7 +63,7 @@ else
     echo "Please install missing dependencies before installing this package:" >&2
     echo "" >&2
     echo "Option 1 - Install via pip (recommended):" >&2
-    echo "  sudo pip3 install -r /usr/lib/machinevision/python-backend/requirements.txt" >&2
+    echo "  sudo pip3 install -r /usr/lib/machinevision/src/requirements.txt" >&2
     echo "" >&2
     echo "Option 2 - Install via apt (if available):" >&2
     echo "  sudo apt install python3-fastapi python3-numpy python3-opencv" >&2

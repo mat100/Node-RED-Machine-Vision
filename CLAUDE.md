@@ -24,7 +24,7 @@ make install      # Create venv and install all dependencies
 make setup-hooks  # Install pre-commit hooks (recommended)
 ```
 
-Virtual environment is created at `python-backend/.venv`.
+Virtual environment is created at `.venv` (at backend root).
 
 ### Development
 ```bash
@@ -44,7 +44,7 @@ make test-watch   # Watch mode for TDD
 make cov          # Run tests with coverage report
 
 # Or directly (activate venv first):
-source python-backend/.venv/bin/activate
+source .venv/bin/activate
 pytest tests/ -v
 
 # Run specific test file
@@ -93,40 +93,56 @@ Production deployment uses systemd (configured in DEB package). Development comm
 
 ### Directory Structure
 ```
-python-backend/
-├── main.py                   # FastAPI app with lifespan management
-├── config.py                 # Pydantic-based configuration
-├── schemas/                  # Pydantic schemas (validation/serialization)
-│   ├── common.py            # ROI, Point, Size, VisionObject, VisionResponse
-│   ├── camera.py            # Camera-related schemas
-│   ├── template.py          # Template schemas
-│   ├── vision.py            # Vision processing request schemas
-│   ├── system.py            # System status and metrics schemas
-│   └── image.py             # Image processing schemas
-├── api/                      # REST API layer
-│   ├── dependencies.py      # FastAPI dependency injection (get_managers, validate_*)
-│   ├── exceptions.py        # Custom exceptions + handlers + messages
-│   └── routers/             # Endpoint routers (camera, vision, template, image, history, system)
-├── core/                     # Core infrastructure
-│   ├── enums.py             # All enums (EdgeMethod, ColorMethod, CameraType, etc.)
-│   ├── color_utils.py       # HSV color definitions and vectorized color utilities
-│   ├── camera_manager.py    # Multi-camera abstraction
-│   ├── image_manager.py     # Shared memory storage + LRU cache
-│   ├── template_manager.py  # Template file management
-│   ├── history_buffer.py    # Time-series inspection tracking
-│   ├── overlay_renderer.py  # Detection result visualization
-│   ├── roi_handler.py       # ROI extraction and validation
-│   └── constants.py         # System constants
-├── services/                 # Business logic layer
-│   ├── camera_service.py
-│   ├── vision_service.py    # Orchestrates vision processing
-│   └── image_service.py
-└── vision/                   # Computer vision algorithms
-    ├── edge_detection.py    # Canny, Sobel, Laplacian, Prewitt, Scharr (+ EdgeDetectionParams)
-    ├── color_detection.py   # HSV-based color range detection (+ ColorDetectionParams)
-    ├── aruco_detection.py   # ArUco marker detection (+ ArucoDetectionParams)
-    ├── template_matching.py # Template matching (+ TemplateMatchParams)
-    └── rotation_detection.py # Rotation analysis (+ RotationDetectionParams)
+backend/
+├── src/                      # Python source code
+│   ├── main.py              # FastAPI app with lifespan management
+│   ├── config.py            # Pydantic-based configuration loader
+│   ├── api/                 # REST API layer
+│   │   ├── dependencies.py  # FastAPI dependency injection (get_managers, validate_*)
+│   │   ├── exceptions.py    # Custom exceptions + handlers + messages
+│   │   └── routers/         # Endpoint routers (camera, vision, template, image, history, system)
+│   ├── core/                # Core infrastructure
+│   │   ├── enums.py         # All enums (EdgeMethod, ColorMethod, CameraType, etc.)
+│   │   ├── color_utils.py   # HSV color definitions and vectorized color utilities
+│   │   ├── camera_manager.py    # Multi-camera abstraction
+│   │   ├── image_manager.py     # Shared memory storage + LRU cache
+│   │   ├── template_manager.py  # Template file management
+│   │   ├── history_buffer.py    # Time-series inspection tracking
+│   │   ├── overlay_renderer.py  # Detection result visualization
+│   │   ├── roi_handler.py       # ROI extraction and validation
+│   │   └── constants.py         # System constants
+│   ├── schemas/             # Pydantic schemas (validation/serialization)
+│   │   ├── common.py        # ROI, Point, Size, VisionObject, VisionResponse
+│   │   ├── camera.py        # Camera-related schemas
+│   │   ├── template.py      # Template schemas
+│   │   ├── vision.py        # Vision processing request schemas
+│   │   ├── system.py        # System status and metrics schemas
+│   │   └── image.py         # Image processing schemas
+│   ├── services/            # Business logic layer
+│   │   ├── camera_service.py
+│   │   ├── vision_service.py    # Orchestrates vision processing
+│   │   └── image_service.py
+│   └── vision/              # Computer vision algorithms
+│       ├── edge_detection.py    # Canny, Sobel, Laplacian, Prewitt, Scharr (+ EdgeDetectionParams)
+│       ├── color_detection.py   # HSV-based color range detection (+ ColorDetectionParams)
+│       ├── aruco_detection.py   # ArUco marker detection (+ ArucoDetectionParams)
+│       ├── template_matching.py # Template matching (+ TemplateMatchParams)
+│       └── rotation_detection.py # Rotation analysis (+ RotationDetectionParams)
+├── tests/                   # Test suite (pytest)
+├── config/                  # Configuration files
+│   ├── config.yaml         # Production configuration
+│   └── config.dev.yaml     # Development configuration
+├── data/                    # Runtime data
+│   └── templates/          # Template images for matching
+├── .venv/                   # Virtual environment (git-ignored)
+├── pyproject.toml           # Python project configuration
+├── requirements.txt         # Production dependencies
+├── requirements-dev.txt     # Development dependencies
+├── Makefile                 # Development commands
+├── CLAUDE.md                # This file
+├── DEVELOPMENT.md           # Development guide
+├── debian/                  # Debian packaging files
+└── packaging/               # Packaging scripts
 
 ```
 
@@ -253,7 +269,7 @@ from schemas import EdgeDetectionParams, ColorDetectionParams  # etc.
 
 ### Adding a New Vision Algorithm
 
-1. Create detector module in `python-backend/vision/`:
+1. Create detector module in `src/vision/`:
 ```python
 # vision/my_detection.py
 from pydantic import BaseModel, Field
@@ -364,7 +380,7 @@ if image_manager.has_image(image_id):
 
 ### Testing Patterns
 
-Test fixtures are available in `python-backend/tests/conftest.py`:
+Test fixtures are available in `tests/conftest.py`:
 - `test_image`, `test_template`: Synthetic test images
 - `image_manager`, `camera_manager`, etc.: Real manager instances
 - `mock_*`: Mock managers for unit tests
@@ -422,7 +438,7 @@ curl http://localhost:8000/api/system/info
 **Inspect shared memory**:
 ```bash
 # Activate venv and run Python shell
-source python-backend/.venv/bin/activate
+source .venv/bin/activate
 python
 ```
 ```python
@@ -461,7 +477,7 @@ The backend exposes all vision processing functionality via REST API endpoints t
 ## Common Pitfalls
 
 1. **"Error: venv not found"**: Run `make install` first to create the virtual environment.
-2. **Import errors**: Always run commands through make (which activates venv), or manually activate: `source python-backend/.venv/bin/activate`
+2. **Import errors**: Always run commands through make (which activates venv), or manually activate: `source .venv/bin/activate`
 3. **Image not in cache**: Images evicted by LRU. Increase `max_images` or `max_memory_mb` in config.
 4. **ROI out of bounds**: Always validate ROI against image dimensions before processing.
 5. **Camera connection fails**: Check camera permissions, USB enumeration, or use `test` camera for development.

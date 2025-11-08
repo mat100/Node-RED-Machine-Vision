@@ -114,7 +114,7 @@ After installation, files will be located in these directories:
 
 ```
 /usr/lib/machinevision/          # Application files
-├── python-backend/              # Backend application (Python code)
+├── src/              # Backend application (Python code)
 ├── check-python-deps.sh         # Dependency checker script
 └── VERSION                      # Version file
 
@@ -308,10 +308,10 @@ image:
 If the service won't start due to missing dependencies:
 ```bash
 # Check which dependencies are missing
-/usr/lib/machinevision/check-python-deps.sh /usr/lib/machinevision/python-backend/requirements.txt
+/usr/lib/machinevision/check-python-deps.sh /usr/lib/machinevision/src/requirements.txt
 
 # Install missing dependencies
-sudo pip3 install -r /usr/lib/machinevision/python-backend/requirements.txt
+sudo pip3 install -r /usr/lib/machinevision/src/requirements.txt
 
 # Restart service
 sudo machinevision restart

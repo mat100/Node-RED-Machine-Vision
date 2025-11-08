@@ -15,7 +15,7 @@ case "$1" in
 
         # Check Python dependencies
         echo "Checking Python dependencies..."
-        if ! /usr/lib/machinevision/check-python-deps.sh /usr/lib/machinevision/python-backend/requirements.txt; then
+        if ! /usr/lib/machinevision/check-python-deps.sh /usr/lib/machinevision/src/requirements.txt; then
             echo ""
             echo "ERROR: Python dependencies are missing!" >&2
             echo "Installation cannot continue." >&2

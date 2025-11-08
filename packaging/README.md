@@ -88,7 +88,7 @@ machinevision start|stop|restart|status|logs|version|rollback
 
 ```bash
 # Install via pip (recommended)
-sudo pip3 install -r python-backend/requirements.txt
+sudo pip3 install -r src/requirements.txt
 
 # Or verify dependencies are available
 python3 -c "import fastapi, uvicorn, pydantic, numpy, cv2, dotenv, yaml"

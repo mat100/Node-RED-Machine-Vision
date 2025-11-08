@@ -19,7 +19,7 @@ make dev
 
 ```
 backend/
-├── python-backend/          # Python FastAPI application
+├── src/          # Python FastAPI application
 │   ├── .venv/              # Virtual environment (created by make install)
 │   ├── main.py             # FastAPI app entry point
 │   ├── config.py           # Configuration management
@@ -40,7 +40,7 @@ backend/
 ### Setup Commands
 
 #### `make install`
-Creates a virtual environment at `python-backend/.venv` and installs all dependencies.
+Creates a virtual environment at `.venv` and installs all dependencies.
 
 ```bash
 make install
@@ -119,7 +119,7 @@ make cov
 
 Generates:
 - Terminal coverage summary
-- HTML coverage report at `python-backend/htmlcov/index.html`
+- HTML coverage report at `src/htmlcov/index.html`
 - Automatically opens the HTML report in your browser (if `xdg-open` is available)
 
 ### Code Quality Commands
@@ -329,7 +329,7 @@ pytest -m integration tests/
 
 ### Development Configuration
 
-Development uses `python-backend/config.dev.yaml`:
+Development uses `config/config.dev.yaml`:
 
 ```yaml
 # Debug mode
@@ -347,7 +347,7 @@ camera:
 
 ### Production Configuration
 
-Production uses environment variables or `python-backend/config.yaml`.
+Production uses environment variables or `config/config.yaml`.
 
 Configuration precedence:
 1. Environment variables (e.g., `MV_IMAGE__MAX_IMAGES=100`)
@@ -405,7 +405,7 @@ Development mode logs to console with DEBUG level. Look for:
 
 **"Module not found" errors**
 - Make sure you're running commands through make (which activates venv)
-- Or manually activate: `source python-backend/.venv/bin/activate`
+- Or manually activate: `source .venv/bin/activate`
 
 **Tests failing with image not found**
 - Images are stored in shared memory with LRU eviction

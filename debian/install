@@ -1,5 +1,5 @@
-python-backend usr/lib/machinevision
-python-backend/config.yaml etc/machinevision
+src usr/lib/machinevision
+config/config.yaml etc/machinevision
 packaging/machinevision usr/bin
 packaging/VERSION usr/lib/machinevision
 packaging/check-python-deps.sh usr/lib/machinevision

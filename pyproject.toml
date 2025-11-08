@@ -30,10 +30,7 @@ python_functions = ["test_*"]
 addopts = [
     "-v",
     "--strict-markers",
-    "--cov=api",
-    "--cov=core",
-    "--cov=vision",
-    "--cov=services",
+    "--cov=src",
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-fail-under=70",
@@ -44,7 +41,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["api", "core", "vision", "services"]
+source = ["src"]
 omit = [
     "*/tests/*",
     "*/venv/*",

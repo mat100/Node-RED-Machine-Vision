@@ -108,8 +108,8 @@ prepare_build() {
     echo "$version" > "$SCRIPT_DIR/VERSION"
 
     # Remove __pycache__ and .pyc files from source
-    find "$BACKEND_DIR/python-backend" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-    find "$BACKEND_DIR/python-backend" -type f -name "*.pyc" -delete 2>/dev/null || true
+    find "$BACKEND_DIR/src" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+    find "$BACKEND_DIR/src" -type f -name "*.pyc" -delete 2>/dev/null || true
 
     print_success "Build directory prepared"
 }

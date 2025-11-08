@@ -65,7 +65,7 @@ class TemplateConstants:
     """Constants related to template matching."""
 
     # Storage
-    DEFAULT_STORAGE_PATH = "templates"
+    DEFAULT_STORAGE_PATH = "data/templates"
     MAX_TEMPLATE_SIZE_MB = 10
     ALLOWED_FORMATS = [".png", ".jpg", ".jpeg"]
 

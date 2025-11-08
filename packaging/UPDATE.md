@@ -209,7 +209,7 @@ If a new version requires configuration changes:
 
 1. Compare old and new configuration:
 ```bash
-diff /etc/machinevision/config.yaml /usr/lib/machinevision/python-backend/config.yaml
+diff /etc/machinevision/config.yaml /usr/lib/machinevision/src/config.yaml
 ```
 
 2. Update configuration as needed:
@@ -257,8 +257,8 @@ journalctl -u machinevision.service -n 50
 
 2. Try manual start:
 ```bash
-cd /usr/lib/machinevision/python-backend
-sudo -u machinevision PYTHONPATH=/usr/lib/machinevision/python-backend /usr/bin/python3 main.py
+cd /usr/lib/machinevision/src
+sudo -u machinevision PYTHONPATH=/usr/lib/machinevision/src /usr/bin/python3 main.py
 ```
 
 3. If problem persists, perform rollback:
@@ -271,10 +271,10 @@ sudo machinevision rollback
 Check and install dependencies:
 ```bash
 # Check which dependencies are missing
-/usr/lib/machinevision/check-python-deps.sh /usr/lib/machinevision/python-backend/requirements.txt
+/usr/lib/machinevision/check-python-deps.sh /usr/lib/machinevision/src/requirements.txt
 
 # Install missing dependencies
-sudo pip3 install -r /usr/lib/machinevision/python-backend/requirements.txt
+sudo pip3 install -r /usr/lib/machinevision/src/requirements.txt
 
 # Restart service
 sudo machinevision restart
