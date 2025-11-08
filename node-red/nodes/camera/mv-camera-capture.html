@@ -4,10 +4,10 @@
         color: '#a6bbcf',
         defaults: {
             name: {value: ""},
+            apiConfig: {value: "", type: "mv-config", required: true},
             sourceType: {value: "usb"},
             cameraId: {value: "test"},
             ipCameraUrl: {value: ""},
-            apiUrl: {value: "http://localhost:8000"},
             autoConnect: {value: false},
             resolution: {
                 value: {
@@ -56,7 +56,11 @@
             });
 
             // Load available cameras from API
-            var apiUrl = $("#node-input-apiUrl").val() || "http://localhost:8000";
+            function getApiUrl() {
+                var configId = $("#node-input-apiConfig").val();
+                var configNode = RED.nodes.node(configId);
+                return configNode ? configNode.apiUrl : 'http://localhost:8000';
+            }
 
             // Add refresh button next to camera select
             var refreshBtn = $('<button type="button" class="red-ui-button" style="margin-left: 10px;"><i class="fa fa-refresh"></i></button>');
@@ -64,6 +68,7 @@
 
             function loadCameras() {
                 refreshBtn.find('i').addClass('fa-spin');
+                var apiUrl = getApiUrl();
 
                 $.ajax({
                     url: apiUrl + "/api/camera/list",
@@ -126,9 +131,8 @@
                 loadCameras();
             });
 
-            // Update cameras when API URL changes
-            $("#node-input-apiUrl").on('change', function() {
-                apiUrl = $(this).val();
+            // Update cameras when API config changes
+            $("#node-input-apiConfig").on('change', function() {
                 loadCameras();
             });
         },
@@ -178,8 +182,8 @@
     </div>
 
     <div class="form-row">
-        <label for="node-input-apiUrl"><i class="fa fa-server"></i> API URL</label>
-        <input type="text" id="node-input-apiUrl" placeholder="http://localhost:8000">
+        <label for="node-input-apiConfig"><i class="fa fa-server"></i> API Config</label>
+        <input type="text" id="node-input-apiConfig">
     </div>
 
     <div class="form-row">

@@ -4,7 +4,7 @@
         color: '#87a980',
         defaults: {
             name: {value: ""},
-            apiUrl: {value: "http://localhost:8000"},
+            apiConfig: {value: "", type: "mv-config", required: true},
             templateSource: {value: "library"},
             templateId: {value: ""},
             threshold: {value: 0.8, validate: function(v) { return v >= 0 && v <= 1; }},
@@ -42,7 +42,10 @@
 
             // Load template list
             $("#template-refresh").on('click', function() {
-                const apiUrl = $("#node-input-apiUrl").val();
+                const configId = $("#node-input-apiConfig").val();
+                const configNode = RED.nodes.node(configId);
+                const apiUrl = configNode ? configNode.apiUrl : 'http://localhost:8000';
+
                 $.ajax({
                     url: apiUrl + "/api/template/list",
                     type: "GET",
@@ -85,8 +88,8 @@
     </div>
 
     <div class="form-row">
-        <label for="node-input-apiUrl"><i class="fa fa-server"></i> API URL</label>
-        <input type="text" id="node-input-apiUrl" placeholder="http://localhost:8000">
+        <label for="node-input-apiConfig"><i class="fa fa-server"></i> API Config</label>
+        <input type="text" id="node-input-apiConfig">
     </div>
 
     <hr>

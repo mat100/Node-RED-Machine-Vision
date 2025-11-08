@@ -11,8 +11,10 @@ module.exports = function(RED) {
         RED.nodes.createNode(this, config);
         const node = this;
 
+        // Get API configuration node
+        node.apiConfig = RED.nodes.getNode(config.apiConfig);
+
         // Configuration
-        node.apiUrl = config.apiUrl || 'http://localhost:8000';
         node.templateId = config.templateId;
         node.templateSource = config.templateSource || 'library';
         node.threshold = parseFloat(config.threshold) || 0.8;
@@ -65,7 +67,7 @@ module.exports = function(RED) {
                     node: node,
                     endpoint: '/api/vision/template-match',
                     requestData: requestData,
-                    apiUrl: node.apiUrl,
+                    apiConfig: node.apiConfig,
                     done: done
                 });
 

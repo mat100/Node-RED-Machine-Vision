@@ -25,6 +25,7 @@
   "node-red": {
     "version": ">=2.0.0",
     "nodes": {
+      "mv-config": "nodes/config/mv-config.js",
       "mv-camera-capture": "nodes/camera/mv-camera-capture.js",
       "mv-image-simulator": "nodes/camera/mv-image-simulator.js",
       "mv-live-preview": "nodes/camera/mv-live-preview.js",

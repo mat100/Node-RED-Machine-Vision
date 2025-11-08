@@ -11,8 +11,10 @@ module.exports = function(RED) {
         RED.nodes.createNode(this, config);
         const node = this;
 
+        // Get API configuration node
+        node.apiConfig = RED.nodes.getNode(config.apiConfig);
+
         // Configuration
-        node.apiUrl = config.apiUrl || 'http://localhost:8000';
         node.dictionary = config.dictionary || 'DICT_4X4_50';
 
         setNodeStatus(node, 'ready');
@@ -57,7 +59,7 @@ module.exports = function(RED) {
                     node: node,
                     endpoint: '/api/vision/aruco-detect',
                     requestData: requestData,
-                    apiUrl: node.apiUrl,
+                    apiConfig: node.apiConfig,
                     done: done
                 });
 

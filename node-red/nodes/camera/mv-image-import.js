@@ -6,7 +6,8 @@ module.exports = function(RED) {
         const node = this;
 
         // Configuration
-        node.apiUrl = config.apiUrl || 'http://localhost:8000';
+        // Get API configuration node
+        node.apiConfig = RED.nodes.getNode(config.apiConfig);
 
         // Status
         node.status({fill: "grey", shape: "ring", text: "ready"});
@@ -27,12 +28,28 @@ module.exports = function(RED) {
                     throw new Error('No file path provided. Use msg.filepath or msg.payload');
                 }
 
+                // Get API configuration
+                if (!node.apiConfig) {
+                    throw new Error('Missing API configuration. Please configure mv-config node.');
+                }
+                const apiUrl = node.apiConfig.apiUrl || 'http://localhost:8000';
+                const headers = {'Content-Type': 'application/json'};
+                if (node.apiConfig.credentials) {
+                    if (node.apiConfig.credentials.apiKey) {
+                        headers['X-API-Key'] = node.apiConfig.credentials.apiKey;
+                    }
+                    if (node.apiConfig.credentials.apiToken) {
+                        headers['Authorization'] = `Bearer ${node.apiConfig.credentials.apiToken}`;
+                    }
+                }
+
                 // Import image via API
                 const response = await axios.post(
-                    `${node.apiUrl}/api/image/import`,
+                    `${apiUrl}/api/image/import`,
                     {
                         file_path: filePath
-                    }
+                    },
+                    {headers}
                 );
 
                 if (response.data.success) {

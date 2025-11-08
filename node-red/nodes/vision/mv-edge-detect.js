@@ -11,8 +11,10 @@ module.exports = function(RED) {
         RED.nodes.createNode(this, config);
         const node = this;
 
+        // Get API configuration node
+        node.apiConfig = RED.nodes.getNode(config.apiConfig);
+
         // Configuration
-        node.apiUrl = config.apiUrl || 'http://localhost:8000';
         node.method = config.method || 'canny';
         node.cannyLow = config.cannyLow || 50;
         node.cannyHigh = config.cannyHigh || 150;
@@ -97,7 +99,7 @@ module.exports = function(RED) {
                     node: node,
                     endpoint: '/api/vision/edge-detect',
                     requestData: requestData,
-                    apiUrl: node.apiUrl,
+                    apiConfig: node.apiConfig,
                     done: done
                 });
 

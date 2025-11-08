@@ -260,13 +260,153 @@ Render detection results as overlay visualizations.
 
 ## Configuration
 
-All nodes communicate with the FastAPI backend at `http://localhost:8000` by default.
+### Backend Configuration (mv-config node)
 
-To change the backend URL, edit the node configuration or set the `VISION_BACKEND_URL` environment variable:
+**Recommended:** All Machine Vision nodes use a centralized **mv-config** configuration node for backend connectivity.
+
+#### Setup Steps:
+
+1. **Add mv-config node to your workspace:**
+   - Open the Node-RED palette
+   - Find `mv-config` in the "config" section
+   - Drag it to your workspace (config nodes appear in the sidebar)
+
+2. **Configure the backend connection:**
+   - Double-click any MV node (e.g., mv-camera-capture)
+   - In the "API Config" dropdown, select "Add new mv-config..."
+   - Enter the backend URL (default: `http://localhost:8000`)
+   - Set timeout (default: 30000ms)
+   - Optionally add API credentials (for future authentication)
+   - Click "Test Connection" to verify backend is accessible
+   - Click "Add" to save
+
+3. **Reuse across all nodes:**
+   - Once created, the same mv-config appears in all MV nodes
+   - Select it from the dropdown - no need to create multiple configs
+   - All nodes automatically use the shared configuration
+
+#### Configuration Properties:
+
+- **Name:** Optional label (e.g., "Local Dev", "Production")
+- **API URL:** Backend URL (format: `http://hostname:port`)
+- **Timeout:** Request timeout in milliseconds (100-120000)
+- **API Key:** Optional API key for authentication
+- **API Token:** Optional bearer token for authentication
+
+#### Benefits:
+
+- ✓ **Single point of change:** Update backend URL once, all nodes update
+- ✓ **Environment switching:** Easily switch between dev/staging/prod
+- ✓ **Connection testing:** Built-in "Test Connection" validates backend
+- ✓ **Live status:** Config node shows ✓ (connected) or ✗ (offline) in label
+- ✓ **Credentials support:** Ready for future authentication requirements
+
+### Alternative: Environment Variable
+
+You can also set the backend URL via environment variable (legacy method):
 
 ```bash
 export VISION_BACKEND_URL=http://192.168.1.100:8000
 ```
+
+**Note:** Individual node configuration takes priority over environment variables. The mv-config node approach is recommended for new projects.
+
+### Backward Compatibility
+
+Existing flows with hardcoded `apiUrl` in individual nodes will continue to work. However, we recommend migrating to mv-config for easier management.
+
+## Migration Guide
+
+### Upgrading to mv-config (v1.1+)
+
+**What Changed:**
+
+In version 1.1.0, we introduced the **mv-config** configuration node to replace individual `apiUrl` fields in each Machine Vision node. This centralizes backend connection settings across your entire workspace.
+
+**Before (v1.0):**
+```javascript
+// Each node had its own apiUrl field
+{
+  "type": "mv-camera-capture",
+  "apiUrl": "http://localhost:8000",  // Repeated in every node
+  ...
+}
+```
+
+**After (v1.1+):**
+```javascript
+// All nodes share one mv-config node
+{
+  "type": "mv-camera-capture",
+  "apiConfig": "config_node_id",  // Reference to shared config
+  ...
+}
+```
+
+### Why Migrate?
+
+✓ **Single point of change** - Update backend URL once, affects all nodes
+✓ **Environment switching** - Create separate configs for dev/staging/prod
+✓ **Connection testing** - Built-in "Test Connection" validates backend health
+✓ **Credentials support** - API keys and tokens managed securely
+✓ **Easier troubleshooting** - Visual status indicators show connection state
+
+### How to Migrate Existing Flows
+
+**Option 1: Automatic (Recommended)**
+
+1. Open your existing flow in Node-RED
+2. Deploy the flow (nodes will show "no config" warning)
+3. Double-click any MV node showing a warning
+4. In the "API Config" dropdown, select "Add new mv-config..."
+5. Configure the backend URL and click "Add"
+6. Repeat step 3-4 for remaining nodes (select existing config from dropdown)
+7. Deploy to save changes
+
+**Option 2: Manual Migration**
+
+If you prefer to update flows manually:
+
+1. Create an mv-config node:
+   - Open Node-RED palette
+   - Find "mv-config" in the config section
+   - Configure backend URL: `http://localhost:8000`
+   - Save and note the config node ID
+
+2. Edit your flow JSON:
+   - Export your flow
+   - Find all nodes with `"apiUrl": "http://localhost:8000"`
+   - Replace with `"apiConfig": "your_config_node_id"`
+   - Remove the old `apiUrl` field
+   - Import the updated flow
+
+### Backward Compatibility
+
+**Important:** Existing flows continue to work without modification. Nodes will check for the new config node first, then fall back to the legacy `apiUrl` field if present.
+
+However, we **strongly recommend migrating** to the config node approach for new and existing projects to benefit from centralized management.
+
+### Best Practices for New Projects
+
+1. **Create mv-config first** - Set up your backend connection before adding vision nodes
+2. **Use descriptive names** - Name configs by environment: "Local Dev", "Production", "Staging"
+3. **Test connection** - Always click "Test Connection" before deploying
+4. **One config per environment** - Don't create multiple configs pointing to the same backend
+5. **Secure credentials** - Use API Key/Token fields for authenticated backends (when available)
+
+### Troubleshooting Migration
+
+**"Missing API configuration" error:**
+- Cause: Node has no config selected and no legacy apiUrl
+- Fix: Edit node and select mv-config from dropdown
+
+**"Connection failed" in mv-config:**
+- Cause: Backend not running or wrong URL
+- Fix: Check backend with `make status` and verify URL in config
+
+**Nodes still use old apiUrl:**
+- Cause: Config field not saved properly
+- Fix: Re-edit each node, select config, and click "Done" (not just "Cancel")
 
 ## Troubleshooting
 

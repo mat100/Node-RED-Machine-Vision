@@ -448,24 +448,65 @@ pre_commit install
 
 ## Node-RED Integration
 
-Custom nodes communicate with FastAPI backend via HTTP:
+### Backend Configuration
+
+All Machine Vision nodes use a centralized **mv-config** configuration node for backend connectivity:
+
+**Setup (required for all nodes):**
+1. Add an `mv-config` node to your Node-RED workspace (found in config section)
+2. Configure the backend URL (default: `http://localhost:8000`)
+3. Optionally set timeout and credentials
+4. Use "Test Connection" to verify backend is accessible
+
+**Node Configuration:**
+```javascript
+// All MV nodes reference the config node
+defaults: {
+    name: {value: ""},
+    apiConfig: {value: "", type: "mv-config", required: true},
+    // ... other node-specific settings
+}
+```
+
+**API Communication:**
+
+Custom nodes use `vision-utils.js` helper for unified API calls:
 ```javascript
 // Example: mv-template-match.js
-axios.post('http://localhost:8000/api/vision/template-match', {
-    image_id: msg.image_id,
-    template_id: msg.template_id,
-    roi: msg.roi
-})
-.then(response => {
-    msg.payload = response.data;
-    node.send(msg);
+const {callVisionAPI, getImageId} = require('../lib/vision-utils');
+
+// Get API config from node
+node.apiConfig = RED.nodes.getNode(config.apiConfig);
+
+// Make API call
+const result = await callVisionAPI({
+    node: node,
+    endpoint: '/api/vision/template-match',
+    requestData: {
+        image_id: msg.image_id,
+        template_id: msg.template_id,
+        roi: msg.roi
+    },
+    apiConfig: node.apiConfig,  // Config node handles URL, timeout, credentials
+    done: done
 });
 ```
 
+**Benefits:**
+- Single point of configuration for all nodes
+- Easy environment switching (dev/prod/staging)
+- Built-in connection testing
+- Credentials support (API key, bearer token)
+- Consistent error handling and timeout management
+
+**Backward Compatibility:**
+Nodes still support legacy `apiUrl` field for existing flows. New projects should use `mv-config` node.
+
 Node structure:
+- `nodes/config/mv-config.js`: Configuration node for backend connection
 - `nodes/*/mv-*.js`: Node logic (JavaScript)
 - `nodes/*/mv-*.html`: Node UI definition
-- `nodes/lib/vision-utils.js`: Shared utilities
+- `nodes/lib/vision-utils.js`: Shared utilities (callVisionAPI, status management)
 
 ## Common Pitfalls
 

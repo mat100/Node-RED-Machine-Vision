@@ -92,7 +92,7 @@
         "x": 560,
         "y": 200,
         "wires": [
-            ["image_preview_canny", "result_merger_edge"]
+            ["image_preview_canny"]
         ]
     },
     {
@@ -124,7 +124,7 @@
         "x": 560,
         "y": 280,
         "wires": [
-            ["image_preview_sobel", "result_merger_edge"]
+            ["image_preview_sobel"]
         ]
     },
     {
@@ -156,7 +156,7 @@
         "x": 560,
         "y": 360,
         "wires": [
-            ["image_preview_laplacian", "result_merger_edge"]
+            ["image_preview_laplacian"]
         ]
     },
     {
@@ -208,81 +208,11 @@
         "wires": []
     },
     {
-        "id": "result_merger_edge",
-        "type": "mv-result-merger",
-        "z": "flow_edge_detection",
-        "name": "Edge Analysis",
-        "inputCount": 3,
-        "timeout": 2000,
-        "ruleType": "custom",
-        "minRequired": 2,
-        "customRule": "// At least 2 methods must detect significant edges\nconst significantEdges = detections.filter(d => \n    d.result && d.result.contour_count > 5\n).length;\nreturn significantEdges >= 2;",
-        "saveToHistory": true,
-        "apiUrl": "http://localhost:8000",
-        "x": 960,
-        "y": 280,
-        "wires": [
-            ["debug_edge", "analysis_display"]
-        ]
-    },
-    {
-        "id": "debug_edge",
-        "type": "debug",
-        "z": "flow_edge_detection",
-        "name": "Edge Results",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "payload",
-        "targetType": "msg",
-        "statusVal": "",
-        "statusType": "auto",
-        "x": 1180,
-        "y": 240,
-        "wires": []
-    },
-    {
-        "id": "analysis_display",
-        "type": "function",
-        "z": "flow_edge_detection",
-        "name": "Format Analysis",
-        "func": "// Format edge detection analysis\nconst detections = msg.payload.all_detections || [];\nlet analysis = \"Edge Detection Analysis:\\n\";\n\ndetections.forEach(d => {\n    if (d.result) {\n        analysis += `\\n${d.name} (${d.method}):`;\n        analysis += `\\n  - Contours found: ${d.result.contour_count}`;\n        analysis += `\\n  - Edge pixels: ${d.result.edge_pixels}`;\n        analysis += `\\n  - Edge ratio: ${(d.result.edge_ratio * 100).toFixed(2)}%`;\n        if (d.result.contours && d.result.contours.length > 0) {\n            const largest = d.result.contours[0];\n            analysis += `\\n  - Largest contour area: ${largest.area.toFixed(0)} pixels`;\n        }\n    }\n});\n\nanalysis += `\\n\\nOverall Result: ${msg.payload.result}`;\n\nmsg.payload = analysis;\nreturn msg;",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1190,
-        "y": 320,
-        "wires": [
-            ["debug_analysis"]
-        ]
-    },
-    {
-        "id": "debug_analysis",
-        "type": "debug",
-        "z": "flow_edge_detection",
-        "name": "Analysis Output",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": true,
-        "complete": "payload",
-        "targetType": "msg",
-        "statusVal": "payload",
-        "statusType": "msg",
-        "x": 1380,
-        "y": 320,
-        "wires": []
-    },
-    {
         "id": "comment_edge_1",
         "type": "comment",
         "z": "flow_edge_detection",
         "name": "Edge Detection Comparison",
-        "info": "This flow demonstrates edge detection using three different methods:\n1. Canny - Most popular, good for clean edges\n2. Sobel - Good for directional edges\n3. Laplacian - Sensitive to noise, finds rapid changes\n\nEach method has different preprocessing:\n- Canny uses Gaussian blur\n- Sobel uses bilateral filter (edge-preserving)\n- Laplacian uses blur + morphology\n\nThe Result Merger analyzes all three methods and passes if at least 2 detect significant edges (>5 contours).",
+        "info": "This flow demonstrates edge detection using three different methods:\n1. Canny - Most popular, good for clean edges\n2. Sobel - Good for directional edges\n3. Laplacian - Sensitive to noise, finds rapid changes\n\nEach method has different preprocessing:\n- Canny uses Gaussian blur\n- Sobel uses bilateral filter (edge-preserving)\n- Laplacian uses blur + morphology\n\nTip: You can add your own logic to compare results using join or function nodes.",
         "x": 170,
         "y": 60,
         "wires": []

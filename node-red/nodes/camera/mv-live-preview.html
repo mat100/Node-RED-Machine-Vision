@@ -4,7 +4,7 @@
         color: '#a6bbcf',
         defaults: {
             name: { value: "" },
-            apiUrl: { value: "http://localhost:8000", required: true },
+            apiConfig: { value: "", type: "mv-config", required: true },
             cameraId: { value: "test" },
             autoStart: { value: false },
             showControls: { value: true }
@@ -26,7 +26,9 @@
             });
 
             function loadAvailableCameras() {
-                var apiUrl = $("#node-input-apiUrl").val() || "http://localhost:8000";
+                var configId = $("#node-input-apiConfig").val();
+                var configNode = RED.nodes.node(configId);
+                var apiUrl = configNode ? configNode.apiUrl : 'http://localhost:8000';
                 var currentCamera = $("#node-input-cameraId").val();
                 var select = $("#node-input-cameraId");
 
@@ -100,8 +102,8 @@
     </div>
 
     <div class="form-row">
-        <label for="node-input-apiUrl"><i class="fa fa-globe"></i> API URL</label>
-        <input type="text" id="node-input-apiUrl" placeholder="http://localhost:8000">
+        <label for="node-input-apiConfig"><i class="fa fa-server"></i> API Config</label>
+        <input type="text" id="node-input-apiConfig">
     </div>
 
     <div class="form-row">

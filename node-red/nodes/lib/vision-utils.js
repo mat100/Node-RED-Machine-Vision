@@ -120,8 +120,7 @@ function createVisionObjectMessage(obj, imageId, timestamp, thumbnail, msg, RED)
  * @param {object} options.node - Node-RED node instance
  * @param {string} options.endpoint - API endpoint path (e.g., '/api/vision/edge-detect')
  * @param {object} options.requestData - Request payload
- * @param {string} options.apiUrl - Base API URL (default: http://localhost:8000)
- * @param {number} options.timeout - Request timeout in ms (default: 30000)
+ * @param {object} options.apiConfig - MV config node instance (required)
  * @param {function} options.done - Node-RED done callback
  * @returns {Promise<object>} API response data
  * @throws {Error} Network or API error
@@ -131,21 +130,47 @@ async function callVisionAPI(options) {
         node,
         endpoint,
         requestData,
-        apiUrl = 'http://localhost:8000',
-        timeout = 30000,
+        apiConfig,
         done
     } = options;
 
+    // Validate config node
+    if (!apiConfig) {
+        const errorMessage = 'Missing API configuration. Please configure mv-config node.';
+        setNodeStatus(node, 'error', 'no config');
+        node.error(errorMessage);
+        if (done) {
+            done(new Error(errorMessage));
+        }
+        throw new Error(errorMessage);
+    }
+
+    // Extract configuration from config node
+    const apiUrl = apiConfig.apiUrl || 'http://localhost:8000';
+    const timeout = apiConfig.timeout || 30000;
     const url = `${apiUrl}${endpoint}`;
+
+    // Build headers
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+
+    // Add credentials if configured
+    if (apiConfig.credentials) {
+        if (apiConfig.credentials.apiKey) {
+            headers['X-API-Key'] = apiConfig.credentials.apiKey;
+        }
+        if (apiConfig.credentials.apiToken) {
+            headers['Authorization'] = `Bearer ${apiConfig.credentials.apiToken}`;
+        }
+    }
 
     try {
         setNodeStatus(node, 'processing');
 
         const response = await axios.post(url, requestData, {
             timeout: timeout,
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            headers: headers
         });
 
         return response.data;
@@ -166,6 +191,9 @@ async function callVisionAPI(options) {
             } else if (status === 400) {
                 errorMessage = `Invalid request: ${detail}`;
                 statusMessage = "invalid request";
+            } else if (status === 401 || status === 403) {
+                errorMessage = `Authentication error: ${detail}`;
+                statusMessage = "auth error";
             } else if (status >= 500) {
                 errorMessage = `Server error: ${detail}`;
                 statusMessage = "server error";

@@ -5,6 +5,30 @@ module.exports = function(RED) {
         RED.nodes.createNode(this, config);
         const node = this;
 
+        // Get API configuration node
+        node.apiConfig = RED.nodes.getNode(config.apiConfig);
+
+        // Helper to get API URL and build headers
+        function getApiSettings() {
+            if (!node.apiConfig) {
+                throw new Error('Missing API configuration. Please configure mv-config node.');
+            }
+            const apiUrl = node.apiConfig.apiUrl || 'http://localhost:8000';
+            const timeout = node.apiConfig.timeout || 30000;
+            const headers = {'Content-Type': 'application/json'};
+
+            if (node.apiConfig.credentials) {
+                if (node.apiConfig.credentials.apiKey) {
+                    headers['X-API-Key'] = node.apiConfig.credentials.apiKey;
+                }
+                if (node.apiConfig.credentials.apiToken) {
+                    headers['Authorization'] = `Bearer ${node.apiConfig.credentials.apiToken}`;
+                }
+            }
+
+            return {apiUrl, timeout, headers};
+        }
+
         // Configuration
         node.sourceType = config.sourceType || 'usb';
 
@@ -17,7 +41,6 @@ module.exports = function(RED) {
             node.cameraId = config.cameraId || 'test';
         }
 
-        node.apiUrl = config.apiUrl || 'http://localhost:8000';
         node.autoConnect = config.autoConnect || false;
 
         // Status
@@ -33,18 +56,21 @@ module.exports = function(RED) {
         async function connectCameraWithRetry(maxRetries = 5, retryDelay = 2000) {
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
+                    const {apiUrl, headers} = getApiSettings();
+
                     // Check if backend is available
-                    await axios.get(`${node.apiUrl}/api/system/health`, { timeout: 1000 });
+                    await axios.get(`${apiUrl}/api/system/health`, { timeout: 1000 });
 
                     // Backend is ready, try to connect camera
                     node.status({fill: "yellow", shape: "ring", text: `connecting (${attempt}/${maxRetries})...`});
 
                     const response = await axios.post(
-                        `${node.apiUrl}/api/camera/connect`,
+                        `${apiUrl}/api/camera/connect`,
                         {
                             camera_id: node.cameraId,
                             resolution: config.resolution
-                        }
+                        },
+                        {headers}
                     );
 
                     if (response.data.success) {
@@ -80,13 +106,17 @@ module.exports = function(RED) {
                 // Extract ROI from msg.roi if provided
                 const roi = msg.roi || null;
 
+                // Get API settings
+                const {apiUrl, headers} = getApiSettings();
+
                 // Capture image with nested params structure
                 const response = await axios.post(
-                    `${node.apiUrl}/api/camera/capture`,
+                    `${apiUrl}/api/camera/capture`,
                     {
                         camera_id: cameraId,
                         params: roi ? { roi: roi } : null
-                    }
+                    },
+                    {headers}
                 );
 
                 if (response.data.success) {
@@ -147,7 +177,8 @@ module.exports = function(RED) {
             // Disconnect camera if needed
             if (node.cameraId && node.cameraId !== 'test') {
                 try {
-                    await axios.delete(`${node.apiUrl}/api/camera/disconnect/${node.cameraId}`);
+                    const {apiUrl, headers} = getApiSettings();
+                    await axios.delete(`${apiUrl}/api/camera/disconnect/${node.cameraId}`, {headers});
                     node.log(`Camera disconnected: ${node.cameraId}`);
                 } catch (error) {
                     // Ignore disconnect errors

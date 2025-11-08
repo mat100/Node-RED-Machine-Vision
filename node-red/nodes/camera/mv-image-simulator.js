@@ -5,8 +5,10 @@ module.exports = function(RED) {
         RED.nodes.createNode(this, config);
         const node = this;
 
+        // Get API configuration node
+        node.apiConfig = RED.nodes.getNode(config.apiConfig);
+
         // Configuration
-        node.apiUrl = config.apiUrl || 'http://localhost:8000';
         node.imageSource = config.imageSource || 'test';
         node.testText = config.testText || 'Test Image';
         node.autoTrigger = config.autoTrigger || false;
@@ -39,14 +41,30 @@ module.exports = function(RED) {
 
         async function captureTestImage() {
             try {
+                if (!node.apiConfig) {
+                    throw new Error('Missing API configuration. Please configure mv-config node.');
+                }
+
+                const apiUrl = node.apiConfig.apiUrl || 'http://localhost:8000';
+                const headers = {'Content-Type': 'application/json'};
+                if (node.apiConfig.credentials) {
+                    if (node.apiConfig.credentials.apiKey) {
+                        headers['X-API-Key'] = node.apiConfig.credentials.apiKey;
+                    }
+                    if (node.apiConfig.credentials.apiToken) {
+                        headers['Authorization'] = `Bearer ${node.apiConfig.credentials.apiToken}`;
+                    }
+                }
+
                 node.status({fill: "blue", shape: "dot", text: "generating..."});
 
                 // Call API to capture test image
                 const response = await axios.post(
-                    `${node.apiUrl}/api/camera/capture`,
+                    `${apiUrl}/api/camera/capture`,
                     null,
                     {
-                        params: { camera_id: 'test' }
+                        params: { camera_id: 'test' },
+                        headers: headers
                     }
                 );
 

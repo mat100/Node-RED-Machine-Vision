@@ -4,7 +4,7 @@
         color: '#FFA500',
         defaults: {
             name: {value: ""},
-            apiUrl: {value: "http://localhost:8000"},
+            apiConfig: {value: "", type: "mv-config", required: true},
             expectedColor: {value: ""},
             minPercentage: {value: 50, validate: RED.validators.number()},
             method: {value: "histogram"},
@@ -27,8 +27,8 @@
     </div>
 
     <div class="form-row">
-        <label for="node-input-apiUrl"><i class="fa fa-server"></i> API URL</label>
-        <input type="text" id="node-input-apiUrl" placeholder="http://localhost:8000">
+        <label for="node-input-apiConfig"><i class="fa fa-server"></i> API Config</label>
+        <input type="text" id="node-input-apiConfig">
     </div>
 
     <div class="form-row">
@@ -86,8 +86,6 @@
         <dd>Array of detected color regions (DetectedObject format)</dd>
         <dt>found <span class="property-type">number</span></dt>
         <dd>1 if color matches, 0 if mismatch (when expected color is set)</dd>
-        <dt>detections <span class="property-type">array</span></dt>
-        <dd>Detection results for result merger</dd>
         <dt>thumbnail <span class="property-type">string</span></dt>
         <dd>Base64-encoded thumbnail with color overlay</dd>
     </dl>

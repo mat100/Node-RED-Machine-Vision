@@ -4,7 +4,7 @@
         color: '#a6bbcf',
         defaults: {
             name: {value: ""},
-            apiUrl: {value: "http://localhost:8000"}
+            apiConfig: {value: "", type: "mv-config", required: true}
         },
         inputs: 1,
         outputs: 1,
@@ -28,8 +28,8 @@
     </div>
 
     <div class="form-row">
-        <label for="node-input-apiUrl"><i class="fa fa-server"></i> API URL</label>
-        <input type="text" id="node-input-apiUrl" placeholder="http://localhost:8000">
+        <label for="node-input-apiConfig"><i class="fa fa-server"></i> API Config</label>
+        <input type="text" id="node-input-apiConfig">
     </div>
 
     <div class="form-tips">

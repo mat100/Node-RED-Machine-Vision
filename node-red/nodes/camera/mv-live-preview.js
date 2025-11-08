@@ -11,8 +11,31 @@ module.exports = function(RED) {
 
         const node = this;
 
+        // Get API configuration node
+        node.apiConfig = RED.nodes.getNode(config.apiConfig);
+
+        // Helper to get API settings
+        function getApiSettings() {
+            if (!node.apiConfig) {
+                throw new Error('Missing API configuration. Please configure mv-config node.');
+            }
+            const apiUrl = node.apiConfig.apiUrl || 'http://localhost:8000';
+            const timeout = node.apiConfig.timeout || 30000;
+            const headers = {'Content-Type': 'application/json'};
+
+            if (node.apiConfig.credentials) {
+                if (node.apiConfig.credentials.apiKey) {
+                    headers['X-API-Key'] = node.apiConfig.credentials.apiKey;
+                }
+                if (node.apiConfig.credentials.apiToken) {
+                    headers['Authorization'] = `Bearer ${node.apiConfig.credentials.apiToken}`;
+                }
+            }
+
+            return {apiUrl, timeout, headers};
+        }
+
         // Store configuration
-        node.apiUrl = config.apiUrl || 'http://localhost:8000';
         node.cameraId = config.cameraId || 'test';
         node.autoStart = config.autoStart || false;
         node.showControls = config.showControls || true;
@@ -28,6 +51,7 @@ module.exports = function(RED) {
             const resolvedCamera = cameraId || node.cameraId;
             const isStreaming = Boolean(streaming);
             const messageTimestamp = timestamp || new Date().toISOString();
+            const {apiUrl} = getApiSettings();
 
             node.send({
                 payload: {
@@ -35,11 +59,11 @@ module.exports = function(RED) {
                     camera_id: resolvedCamera,
                     stream_url: isStreaming ? node.streamUrl : null,
                     timestamp: messageTimestamp,
-                    api_url: node.apiUrl
+                    api_url: apiUrl
                 },
                 stream_url: isStreaming ? node.streamUrl : null,
                 camera_id: resolvedCamera,
-                api_url: node.apiUrl
+                api_url: apiUrl
             });
         }
 
@@ -49,9 +73,11 @@ module.exports = function(RED) {
                 return Promise.resolve(true);
             }
 
-            return axios.post(`${node.apiUrl}/api/camera/connect`, {
+            const {apiUrl, headers} = getApiSettings();
+
+            return axios.post(`${apiUrl}/api/camera/connect`, {
                 camera_id: cameraId
-            }).then(() => {
+            }, {headers}).then(() => {
                 node.log(`Camera ${cameraId} ready for streaming`);
                 return true;
             }).catch(error => {
@@ -91,8 +117,9 @@ module.exports = function(RED) {
             node.cameraId = cameraId;
             ensureCameraConnected(cameraId)
                 .then(() => {
+                    const {apiUrl} = getApiSettings();
                     // Build MJPEG stream URL
-                    node.streamUrl = `${node.apiUrl}/api/camera/stream/${cameraId}`;
+                    node.streamUrl = `${apiUrl}/api/camera/stream/${cameraId}`;
                     node.streamActive = true;
 
                     // Update status
@@ -117,8 +144,9 @@ module.exports = function(RED) {
             const activeCamera = node.cameraId;
 
             if (node.streamActive && activeCamera) {
+                const {apiUrl, headers} = getApiSettings();
                 // Call stop endpoint
-                axios.post(`${node.apiUrl}/api/camera/stream/stop/${activeCamera}`)
+                axios.post(`${apiUrl}/api/camera/stream/stop/${activeCamera}`, {}, {headers})
                     .then(response => {
                         node.log(`Stopped stream for camera: ${activeCamera}`);
                     })

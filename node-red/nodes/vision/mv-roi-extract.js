@@ -5,8 +5,10 @@ module.exports = function(RED) {
         RED.nodes.createNode(this, config);
         const node = this;
 
+        // Get API configuration node
+        node.apiConfig = RED.nodes.getNode(config.apiConfig);
+
         // Configuration
-        node.apiUrl = config.apiUrl || 'http://localhost:8000';
         node.roi = config.roi || {x: 0, y: 0, width: 100, height: 100};
         node.roiMode = config.roiMode || 'absolute';
 
@@ -54,15 +56,33 @@ module.exports = function(RED) {
                     roi: bounding_box
                 };
 
+                // Get API configuration
+                if (!node.apiConfig) {
+                    throw new Error('Missing API configuration. Please configure mv-config node.');
+                }
+                const apiUrl = node.apiConfig.apiUrl || 'http://localhost:8000';
+                const timeout = node.apiConfig.timeout || 30000;
+
+                // Build headers
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                if (node.apiConfig.credentials) {
+                    if (node.apiConfig.credentials.apiKey) {
+                        headers['X-API-Key'] = node.apiConfig.credentials.apiKey;
+                    }
+                    if (node.apiConfig.credentials.apiToken) {
+                        headers['Authorization'] = `Bearer ${node.apiConfig.credentials.apiToken}`;
+                    }
+                }
+
                 // Call API
                 const response = await axios.post(
-                    `${node.apiUrl}/api/image/extract-roi`,
+                    `${apiUrl}/api/image/extract-roi`,
                     requestData,
                     {
-                        timeout: 30000,
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
+                        timeout: timeout,
+                        headers: headers
                     }
                 );
 

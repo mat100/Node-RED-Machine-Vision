@@ -85,7 +85,7 @@
         "x": 560,
         "y": 200,
         "wires": [
-            ["image_preview_2", "result_merger"]
+            ["image_preview_2"]
         ]
     },
     {
@@ -110,7 +110,7 @@
         "x": 560,
         "y": 280,
         "wires": [
-            ["image_preview_3", "result_merger"]
+            ["image_preview_3"]
         ]
     },
     {
@@ -135,7 +135,7 @@
         "x": 560,
         "y": 360,
         "wires": [
-            ["image_preview_4", "result_merger"]
+            ["image_preview_4"]
         ]
     },
     {
@@ -187,153 +187,11 @@
         "wires": []
     },
     {
-        "id": "result_merger",
-        "type": "mv-result-merger",
-        "z": "flow_mv_example",
-        "name": "Quality Check",
-        "inputCount": 3,
-        "timeout": 1000,
-        "ruleType": "all_pass",
-        "minRequired": 2,
-        "customRule": "// All detections must pass\nreturn detections.every(d => d.found);",
-        "saveToHistory": true,
-        "apiUrl": "http://localhost:8000",
-        "x": 960,
-        "y": 280,
-        "wires": [
-            ["debug_output", "decision_switch", "final_preview"]
-        ]
-    },
-    {
-        "id": "debug_output",
-        "type": "debug",
-        "z": "flow_mv_example",
-        "name": "Debug Results",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "payload",
-        "targetType": "msg",
-        "statusVal": "",
-        "statusType": "auto",
-        "x": 1180,
-        "y": 200,
-        "wires": []
-    },
-    {
-        "id": "decision_switch",
-        "type": "switch",
-        "z": "flow_mv_example",
-        "name": "Pass/Fail",
-        "property": "payload.result",
-        "propertyType": "msg",
-        "rules": [
-            {
-                "t": "eq",
-                "v": "PASS",
-                "vt": "str"
-            },
-            {
-                "t": "eq",
-                "v": "FAIL",
-                "vt": "str"
-            }
-        ],
-        "checkall": "true",
-        "repair": false,
-        "outputs": 2,
-        "x": 1160,
-        "y": 280,
-        "wires": [
-            ["pass_notification"],
-            ["fail_notification"]
-        ]
-    },
-    {
-        "id": "pass_notification",
-        "type": "template",
-        "z": "flow_mv_example",
-        "name": "PASS Message",
-        "field": "payload",
-        "fieldType": "msg",
-        "format": "handlebars",
-        "syntax": "mustache",
-        "template": "✅ INSPECTION PASSED\n{{payload.summary.passed}}/{{payload.summary.total_checks}} checks passed",
-        "output": "str",
-        "x": 1360,
-        "y": 240,
-        "wires": [
-            ["ui_text_result"]
-        ]
-    },
-    {
-        "id": "fail_notification",
-        "type": "template",
-        "z": "flow_mv_example",
-        "name": "FAIL Message",
-        "field": "payload",
-        "fieldType": "msg",
-        "format": "handlebars",
-        "syntax": "mustache",
-        "template": "❌ INSPECTION FAILED\n{{payload.summary.passed}}/{{payload.summary.total_checks}} checks passed\nFailed: {{payload.failed_checks}}",
-        "output": "str",
-        "x": 1360,
-        "y": 320,
-        "wires": [
-            ["ui_text_result"]
-        ]
-    },
-    {
-        "id": "ui_text_result",
-        "type": "debug",
-        "z": "flow_mv_example",
-        "name": "Result Display",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": true,
-        "complete": "payload",
-        "targetType": "msg",
-        "statusVal": "payload",
-        "statusType": "msg",
-        "x": 1560,
-        "y": 280,
-        "wires": []
-    },
-    {
-        "id": "final_preview",
-        "type": "mv-overlay",
-        "z": "flow_mv_example",
-        "name": "Final Overlay",
-        "x": 1170,
-        "y": 360,
-        "wires": [
-            ["image_preview_final"]
-        ]
-    },
-    {
-        "id": "image_preview_final",
-        "type": "image",
-        "z": "flow_mv_example",
-        "name": "Final Result",
-        "width": "320",
-        "data": "payload",
-        "dataType": "msg",
-        "thumbnail": false,
-        "active": true,
-        "pass": false,
-        "outputs": 0,
-        "x": 1350,
-        "y": 360,
-        "wires": []
-    },
-    {
         "id": "comment_1",
         "type": "comment",
         "z": "flow_mv_example",
         "name": "Machine Vision Inspection Flow",
-        "info": "This flow demonstrates:\n1. Image capture (using test image)\n2. Multiple parallel detections (3 template matches)\n3. Result merging with decision logic\n4. Pass/Fail output\n\nNote: The 'image' nodes require node-red-contrib-image-output",
+        "info": "This flow demonstrates:\n1. Image capture (using test image)\n2. Multiple parallel detections (3 template matches)\n3. Visual preview of detection results\n\nNote: The 'image' nodes require node-red-contrib-image-output\nTip: You can add your own logic to aggregate results using join or function nodes",
         "x": 170,
         "y": 60,
         "wires": []
