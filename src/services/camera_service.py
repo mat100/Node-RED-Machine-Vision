@@ -104,7 +104,7 @@ class CameraService:
 
     def capture_and_store(
         self, camera_id: str, roi: Optional[ROI] = None, metadata: Optional[Dict] = None
-    ) -> Tuple[str, str, Dict]:
+    ) -> Tuple[str, str, Dict, int, int]:
         """
         Capture image from camera and store it.
 
@@ -113,7 +113,7 @@ class CameraService:
         2. Applies ROI if specified
         3. Stores image in image manager
         4. Creates thumbnail
-        5. Returns image ID, thumbnail, and metadata
+        5. Returns image ID, thumbnail, metadata, and image dimensions
 
         Args:
             camera_id: Camera identifier
@@ -121,7 +121,7 @@ class CameraService:
             metadata: Optional metadata to attach to image
 
         Returns:
-            Tuple of (image_id, thumbnail_base64, metadata_dict)
+            Tuple of (image_id, thumbnail_base64, metadata_dict, width, height)
 
         Raises:
             CameraNotFoundException: If camera not found or image capture fails
@@ -177,7 +177,7 @@ class CameraService:
         }
 
         logger.debug(f"Image captured and stored: {image_id}")
-        return image_id, thumbnail_base64, result_metadata
+        return image_id, thumbnail_base64, result_metadata, image.shape[1], image.shape[0]
 
     def get_preview(
         self, camera_id: str, create_thumbnail: bool = True

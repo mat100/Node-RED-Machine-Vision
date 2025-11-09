@@ -16,7 +16,15 @@ from api.dependencies import get_camera_manager  # Still needed for stream endpo
 from api.dependencies import get_camera_service
 from api.exceptions import safe_endpoint
 from core.utils.camera_identifier import parse as parse_camera_id
-from schemas import CameraCaptureResponse, CameraConnectRequest, CameraInfo, CaptureRequest
+from schemas import (
+    ROI,
+    CameraConnectRequest,
+    CameraInfo,
+    CaptureRequest,
+    Point,
+    VisionObject,
+    VisionResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,24 +65,41 @@ async def connect_camera(
 async def capture_image(
     request: CaptureRequest,
     camera_service=Depends(get_camera_service),
-) -> CameraCaptureResponse:
+) -> VisionResponse:
     """Capture image from camera"""
+    start_time = time.time()
+
     # Extract ROI from params if provided
     roi_obj = None
     if request.params and request.params.roi:
         roi_obj = request.params.roi
 
     # Service handles capture, ROI extraction, storage, and thumbnail creation
-    image_id, thumbnail_base64, metadata = camera_service.capture_and_store(
+    image_id, thumbnail_base64, metadata, width, height = camera_service.capture_and_store(
         camera_id=request.camera_id, roi=roi_obj
     )
 
-    return CameraCaptureResponse(
-        success=True,
-        image_id=image_id,
-        timestamp=datetime.now(),
+    # Create VisionObject representing the captured image
+    vision_object = VisionObject(
+        object_id=f"img_{image_id[:8]}",
+        object_type="camera_capture",
+        bounding_box=ROI(x=0, y=0, width=width, height=height),
+        center=Point(x=width / 2, y=height / 2),
+        confidence=1.0,
+        properties={
+            "camera_id": metadata["camera_id"],
+            "resolution": [width, height],
+            "image_id": image_id,
+        },
+    )
+
+    # Calculate processing time
+    processing_time_ms = int((time.time() - start_time) * 1000)
+
+    return VisionResponse(
+        objects=[vision_object],
         thumbnail_base64=thumbnail_base64,
-        metadata=metadata,
+        processing_time_ms=processing_time_ms,
     )
 
 

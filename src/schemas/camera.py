@@ -4,10 +4,8 @@ Camera-related API models.
 This module contains request and response models for camera operations:
 - Camera information and connection
 - Image capture parameters
-- Capture responses
 """
 
-from datetime import datetime
 from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
@@ -83,13 +81,3 @@ class CaptureRequest(BaseModel):
         description="Camera identifier (e.g., 'usb_0', 'ip_192.168.1.100', 'test')"
     )
     params: Optional[CaptureParams] = Field(None, description="Capture parameters (ROI, etc.)")
-
-
-class CameraCaptureResponse(BaseModel):
-    """Response from camera capture"""
-
-    success: bool
-    image_id: str
-    timestamp: datetime
-    thumbnail_base64: str
-    metadata: Dict[str, Any]

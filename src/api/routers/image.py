@@ -3,7 +3,6 @@ Image API Router - Image processing operations
 """
 
 import logging
-from datetime import datetime
 
 import cv2
 from fastapi import APIRouter, Depends
@@ -11,7 +10,7 @@ from fastapi import APIRouter, Depends
 from api.dependencies import get_image_service
 from api.exceptions import safe_endpoint
 from core.image.converters import encode_image_to_base64
-from schemas import ImageImportRequest, ImageImportResponse, ROIExtractRequest, ROIExtractResponse
+from schemas import ROI, ImageImportRequest, Point, ROIExtractRequest, VisionObject, VisionResponse
 
 logger = logging.getLogger(__name__)
 
@@ -22,12 +21,12 @@ router = APIRouter()
 @safe_endpoint
 async def extract_roi(
     request: ROIExtractRequest, image_service=Depends(get_image_service)
-) -> ROIExtractResponse:
+) -> VisionResponse:
     """
     Extract Region of Interest thumbnail from an image.
 
     This endpoint extracts a rectangular region from an existing image
-    and returns a thumbnail of that region. The original image_id remains
+    and returns it as a VisionObject. The original image_id remains
     unchanged, only the roi and thumbnail are updated.
 
     Args:
@@ -35,8 +34,12 @@ async def extract_roi(
         image_service: Image service dependency
 
     Returns:
-        ROIExtractResponse with thumbnail and clipped bounding_box
+        VisionResponse with single VisionObject representing the extracted ROI
     """
+    import time
+
+    start_time = time.time()
+
     # Extract ROI from source image (clipped to image bounds)
     # request.roi is already a Pydantic ROI model - pass directly
     roi_image = image_service.get_image_with_roi(
@@ -75,14 +78,44 @@ async def extract_roi(
         f"{clipped_bbox.width}x{clipped_bbox.height} at ({clipped_bbox.x},{clipped_bbox.y})"
     )
 
-    return ROIExtractResponse(success=True, thumbnail=thumbnail, bounding_box=clipped_bbox)
+    # Create VisionObject representing the extracted ROI
+    vision_object = VisionObject(
+        object_id=f"roi_{request.image_id[:8]}",
+        object_type="roi_extract",
+        bounding_box=clipped_bbox,
+        center=Point(
+            x=clipped_bbox.x + clipped_bbox.width / 2,
+            y=clipped_bbox.y + clipped_bbox.height / 2,
+        ),
+        confidence=1.0,
+        area=float(clipped_bbox.width * clipped_bbox.height),
+        properties={
+            "source_image_id": request.image_id,
+            "original_roi": request.roi.dict(),
+            "clipped": (
+                clipped_bbox.x != request.roi.x
+                or clipped_bbox.y != request.roi.y
+                or clipped_bbox.width != request.roi.width
+                or clipped_bbox.height != request.roi.height
+            ),
+        },
+    )
+
+    # Calculate processing time
+    processing_time_ms = int((time.time() - start_time) * 1000)
+
+    return VisionResponse(
+        objects=[vision_object],
+        thumbnail_base64=thumbnail,
+        processing_time_ms=processing_time_ms,
+    )
 
 
 @router.post("/import")
 @safe_endpoint
 async def import_image(
     request: ImageImportRequest, image_service=Depends(get_image_service)
-) -> ImageImportResponse:
+) -> VisionResponse:
     """
     Import image from file system.
 
@@ -90,20 +123,24 @@ async def import_image(
     ImageManager, and generates a thumbnail. This allows external applications
     to register their images for processing by vision nodes.
 
-    The response structure matches CameraCaptureResponse for compatibility
-    with existing Node-RED vision blocks.
+    The response structure uses VisionResponse for consistency with all other
+    vision processing endpoints.
 
     Args:
         request: Import request with file path
         image_service: Image service dependency
 
     Returns:
-        ImageImportResponse with image_id and thumbnail (same as camera capture)
+        VisionResponse with single VisionObject representing the imported image
 
     Raises:
         HTTPException 404: If file not found
         HTTPException 400: If file cannot be loaded as image
     """
+    import time
+
+    start_time = time.time()
+
     # Import from file (service handles validation and errors)
     image_id, thumbnail_base64, metadata = image_service.import_from_file(request.file_path)
 
@@ -112,10 +149,27 @@ async def import_image(
         f"({metadata['width']}x{metadata['height']})"
     )
 
-    return ImageImportResponse(
-        success=True,
-        image_id=image_id,
-        timestamp=datetime.now(),
+    # Create VisionObject representing the imported image
+    vision_object = VisionObject(
+        object_id=f"img_{image_id[:8]}",
+        object_type="image_import",
+        bounding_box=ROI(x=0, y=0, width=metadata["width"], height=metadata["height"]),
+        center=Point(x=metadata["width"] / 2, y=metadata["height"] / 2),
+        confidence=1.0,
+        properties={
+            "source": metadata["source"],
+            "file_path": metadata["file_path"],
+            "file_size_bytes": metadata["file_size_bytes"],
+            "resolution": [metadata["width"], metadata["height"]],
+            "image_id": image_id,
+        },
+    )
+
+    # Calculate processing time
+    processing_time_ms = int((time.time() - start_time) * 1000)
+
+    return VisionResponse(
+        objects=[vision_object],
         thumbnail_base64=thumbnail_base64,
-        metadata=metadata,
+        processing_time_ms=processing_time_ms,
     )

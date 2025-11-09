@@ -41,19 +41,13 @@ from schemas.params import (
 from .base import BaseDetectionParams
 
 # Camera models
-from .camera import (
-    CameraCaptureResponse,
-    CameraConnectRequest,
-    CameraInfo,
-    CaptureParams,
-    CaptureRequest,
-)
+from .camera import CameraConnectRequest, CameraInfo, CaptureParams, CaptureRequest
 
 # Common models (core data structures)
 from .common import ROI, Point, Size, VisionObject, VisionResponse
 
 # Image processing models
-from .image import ImageImportRequest, ImageImportResponse, ROIExtractRequest, ROIExtractResponse
+from .image import ImageImportRequest, ROIExtractRequest
 
 # System models
 from .system import DebugSettings, PerformanceMetrics, SystemStatus
@@ -83,7 +77,6 @@ __all__ = [
     "CameraConnectRequest",
     "CaptureParams",
     "CaptureRequest",
-    "CameraCaptureResponse",
     # Template models
     "TemplateInfo",
     "TemplateUploadResponse",
@@ -100,9 +93,7 @@ __all__ = [
     "DebugSettings",
     # Image models
     "ROIExtractRequest",
-    "ROIExtractResponse",
     "ImageImportRequest",
-    "ImageImportResponse",
     # Enums (re-exported from core.enums)
     "AngleRange",
     "ArucoDict",
