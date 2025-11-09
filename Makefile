@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 PROJECT_ROOT := $(CURDIR)
-BACKEND_DIR := $(PROJECT_ROOT)/src
+BACKEND_DIR := $(PROJECT_ROOT)
 VENV := $(PROJECT_ROOT)/.venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
