@@ -15,8 +15,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-# Add parent directory to path
-sys.path.append(str(Path(__file__).parent))
+# Add src directory to path
+sys.path.append(str(Path(__file__).parent / "src"))
 
 from api.exceptions import register_exception_handlers  # noqa: E402
 
@@ -199,7 +199,7 @@ def handle_signal(signum, frame):
 
 if __name__ == "__main__":
     # Write PID file for process management
-    run_dir = os.getenv("RUN_DIR", os.path.join(Path(__file__).parent.parent, "var", "run"))
+    run_dir = os.getenv("RUN_DIR", os.path.join(Path(__file__).parent, "var", "run"))
     pid_file = os.path.join(run_dir, "backend.pid")
 
     # Ensure run directory exists
