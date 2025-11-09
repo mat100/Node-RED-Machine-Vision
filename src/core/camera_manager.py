@@ -4,6 +4,7 @@ Camera Manager - Handles multiple camera types (USB, IP, etc.)
 
 import asyncio
 import logging
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
@@ -16,6 +17,21 @@ import cv2
 import numpy as np
 
 from core.enums import CameraType
+
+# Suppress H.264 decoder warnings from ffmpeg/libav
+# These occur when starting H.264 streams mid-stream before receiving keyframe
+os.environ.setdefault("OPENCV_FFMPEG_LOGLEVEL", "-8")
+os.environ.setdefault("OPENCV_LOG_LEVEL", "ERROR")
+
+# Set OpenCV log level to ERROR to suppress warnings (if available)
+try:
+    # OpenCV 4.5+ has setLogLevel
+    if hasattr(cv2, "setLogLevel"):
+        cv2.setLogLevel(
+            3
+        )  # 3 = ERROR level (0=SILENT, 1=FATAL, 2=ERROR, 3=WARNING, 4=INFO, 5=DEBUG)
+except Exception:
+    pass  # Silently ignore if not supported
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +69,9 @@ class Camera:
                 if self.config.type == CameraType.USB:
                     self.cap = cv2.VideoCapture(self.config.source)
                 elif self.config.type == CameraType.IP:
-                    self.cap = cv2.VideoCapture(self.config.source)
+                    self.cap = cv2.VideoCapture(self.config.source, cv2.CAP_FFMPEG)
+                    # Configure for better H.264 handling
+                    self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimize buffer
                 elif self.config.type == CameraType.FILE:
                     self.cap = cv2.VideoCapture(self.config.source)
                 else:
@@ -64,6 +82,16 @@ class Camera:
                     self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.config.resolution[0])
                     self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.config.resolution[1])
                     self.cap.set(cv2.CAP_PROP_FPS, self.config.fps)
+
+                    # For H.264 streams: discard initial frames until we get a valid keyframe
+                    # This prevents "non-existing PPS" errors
+                    if self.config.type in (CameraType.IP, CameraType.FILE):
+                        logger.debug(f"Flushing initial frames for {self.config.id}...")
+                        for _ in range(10):
+                            ret, _ = self.cap.read()
+                            if ret:
+                                break
+                        logger.debug(f"Initial frames flushed for {self.config.id}")
 
                     self.connected = True
                     logger.info(f"Camera {self.config.id} connected")

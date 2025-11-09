@@ -106,7 +106,7 @@ async def disconnect_camera(camera_id: str, camera_service=Depends(get_camera_se
 active_streams = {}
 
 
-@router.get("/stream/{camera_id}")
+@router.get("/stream/{camera_id:path}")
 async def stream_mjpeg(
     camera_id: str, camera_manager=Depends(get_camera_manager), request: Request = None
 ):
@@ -193,7 +193,7 @@ async def stream_mjpeg(
     )
 
 
-@router.post("/stream/stop/{camera_id}")
+@router.post("/stream/stop/{camera_id:path}")
 async def stop_stream(camera_id: str) -> dict:
     """Stop MJPEG stream for a camera"""
     if camera_id in active_streams:

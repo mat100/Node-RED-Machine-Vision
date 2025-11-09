@@ -15,6 +15,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+# Suppress ffmpeg/libav H.264 decoder warnings
+# These are cosmetic errors that occur when starting H.264 streams mid-stream
+os.environ["OPENCV_FFMPEG_LOGLEVEL"] = "-8"  # Suppress ffmpeg warnings
+os.environ["OPENCV_LOG_LEVEL"] = "ERROR"  # Only show errors, not warnings
+
 # Add src directory to path
 sys.path.append(str(Path(__file__).parent / "src"))
 
