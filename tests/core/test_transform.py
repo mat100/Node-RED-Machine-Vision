@@ -4,10 +4,9 @@ Unit tests for coordinate transformation utilities
 
 import pytest
 
-from common.base import Point, ROI
-
-from schemas import ReferenceObject, VisionObject
+from common.base import ROI, Point
 from core.image.transform import apply_reference_transform
+from schemas import ReferenceObject, VisionObject
 
 
 class TestApplyReferenceTransform:

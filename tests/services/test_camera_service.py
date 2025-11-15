@@ -96,7 +96,9 @@ class TestCameraService:
 
         # Mock extract_roi to return the ROI image
         with patch("services.camera_service.extract_roi", return_value=roi_image):
-            image_id, thumbnail, metadata, width, height = service.capture_and_store(camera_id="test", roi=roi)
+            image_id, thumbnail, metadata, width, height = service.capture_and_store(
+                camera_id="test", roi=roi
+            )
 
         assert image_id == "test-image-id"
         # Metadata should reflect ROI dimensions
@@ -187,7 +189,9 @@ class TestCameraServiceIntegration:
     def test_full_capture_workflow(self, camera_service, test_image):
         """Test complete capture workflow with real managers"""
         # Note: This uses real CameraManager with test camera
-        image_id, thumbnail, metadata, width, height = camera_service.capture_and_store(camera_id="test")
+        image_id, thumbnail, metadata, width, height = camera_service.capture_and_store(
+            camera_id="test"
+        )
 
         assert image_id is not None
         assert len(image_id) > 0
@@ -198,7 +202,9 @@ class TestCameraServiceIntegration:
         """Test capture with ROI using real managers"""
         roi = ROI(x=100, y=100, width=300, height=200)
 
-        image_id, thumbnail, metadata, width, height = camera_service.capture_and_store(camera_id="test", roi=roi)
+        image_id, thumbnail, metadata, width, height = camera_service.capture_and_store(
+            camera_id="test", roi=roi
+        )
 
         assert image_id is not None
         # After ROI applied, metadata should reflect ROI dimensions

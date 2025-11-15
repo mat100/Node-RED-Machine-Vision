@@ -12,13 +12,15 @@ from common.base import ROI, Point
 from common.constants import VisionConstants
 from common.enums import AngleRange, RotationMethod, VisionObjectType
 from schemas import VisionObject
+from vision.base_detector import BaseDetector
 
 
-class RotationDetector:
+class RotationDetector(BaseDetector):
     """Rotation detection processor."""
 
     def __init__(self):
         """Initialize rotation detector."""
+        super().__init__()
 
     def detect(
         self,

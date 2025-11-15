@@ -16,13 +16,15 @@ import numpy as np
 from common.base import ROI, Point
 from common.enums import ArucoDetectionMode, VisionObjectType
 from schemas import ReferenceObject, VisionObject
+from vision.base_detector import BaseDetector
 
 
-class ArucoDetector:
+class ArucoDetector(BaseDetector):
     """ArUco marker detector."""
 
     def __init__(self):
         """Initialize ArUco detector."""
+        super().__init__()
 
         # Dictionary mapping for OpenCV ArUco
         self.aruco_dicts = {

@@ -19,6 +19,9 @@ def client():
     from core.image_manager import ImageManager
     from core.template_manager import TemplateManager
     from main import app
+    from services.camera_service import CameraService
+    from services.image_service import ImageService
+    from services.vision_service import VisionService
 
     # Create temporary template directory
     temp_dir = tempfile.mkdtemp()
@@ -28,6 +31,17 @@ def client():
     camera_manager = CameraManager()
     template_manager = TemplateManager(temp_dir)
 
+    # Initialize services as singletons (matching production behavior)
+    vision_service = VisionService(
+        image_manager=image_manager,
+        template_manager=template_manager,
+    )
+    camera_service = CameraService(
+        camera_manager=camera_manager,
+        image_manager=image_manager,
+    )
+    image_service = ImageService(image_manager=image_manager)
+
     # Create test config
     test_config = {
         "debug": {
@@ -36,11 +50,15 @@ def client():
         }
     }
 
-    # Set in app state
+    # Set in app state (managers + services)
     app.state.image_manager = image_manager
     app.state.camera_manager = camera_manager
     app.state.template_manager = template_manager
+    app.state.vision_service = vision_service
+    app.state.camera_service = camera_service
+    app.state.image_service = image_service
     app.state.config = test_config
+    app.state.active_streams = {}
 
     # Create test client (no context manager to avoid blocking)
     test_client = TestClient(app, raise_server_exceptions=False)

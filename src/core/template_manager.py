@@ -146,21 +146,13 @@ class TemplateManager:
         Returns:
             Template ID
         """
-        # Extract ROI
-        x = int(roi["x"])
-        y = int(roi["y"])
-        width = int(roi["width"])
-        height = int(roi["height"])
+        from core.image.roi import extract_roi
 
-        # Validate ROI
-        if x < 0 or y < 0:
-            raise ValueError("ROI coordinates must be non-negative")
+        # Extract ROI using centralized validation
+        template = extract_roi(source_image, roi, safe_mode=False)
 
-        if x + width > source_image.shape[1] or y + height > source_image.shape[0]:
+        if template is None:
             raise ValueError("ROI exceeds image bounds")
-
-        # Extract template
-        template = source_image[y : y + height, x : x + width].copy()
 
         # Upload as new template
         return self.upload_template(name, template, description)

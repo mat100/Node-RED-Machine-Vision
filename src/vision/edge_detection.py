@@ -11,14 +11,15 @@ from common.base import ROI, Point
 from common.constants import VisionConstants
 from common.enums import EdgeMethod, VisionObjectType
 from schemas import VisionObject
+from vision.base_detector import BaseDetector
 
 
-class EdgeDetector:
+class EdgeDetector(BaseDetector):
     """Edge detection processor."""
 
     def __init__(self):
         """Initialize edge detector."""
-        pass  # No initialization needed for stateless detector
+        super().__init__()
 
     def detect(
         self,

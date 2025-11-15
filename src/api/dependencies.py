@@ -219,52 +219,77 @@ def get_config(request: Request) -> Dict[str, Any]:
         return {}
 
 
-# Service layer dependencies
-def get_camera_service(
-    camera_manager: CameraManager = Depends(get_camera_manager),
-    image_manager: ImageManager = Depends(get_image_manager),
-) -> CameraService:
+# Service layer dependencies (singleton pattern for performance)
+def get_camera_service(request: Request) -> CameraService:
     """
-    Get camera service instance.
+    Get singleton CameraService instance from app state.
+
+    Services are initialized once at startup in the lifespan handler
+    and reused across all requests for optimal performance.
 
     Args:
-        camera_manager: Camera manager dependency
-        image_manager: Image manager dependency
+        request: FastAPI request object
 
     Returns:
-        CameraService instance
+        CameraService singleton instance
+
+    Raises:
+        HTTPException: If service not initialized
     """
-    return CameraService(camera_manager=camera_manager, image_manager=image_manager)
+    try:
+        return request.app.state.camera_service
+    except AttributeError as e:
+        logger.error(f"CameraService not initialized in app state: {e}")
+        raise HTTPException(
+            status_code=500, detail="Internal server error: CameraService not initialized"
+        )
 
 
-def get_image_service(image_manager: ImageManager = Depends(get_image_manager)) -> ImageService:
+def get_image_service(request: Request) -> ImageService:
     """
-    Get image service instance.
+    Get singleton ImageService instance from app state.
+
+    Services are initialized once at startup in the lifespan handler
+    and reused across all requests for optimal performance.
 
     Args:
-        image_manager: Image manager dependency
+        request: FastAPI request object
 
     Returns:
-        ImageService instance
+        ImageService singleton instance
+
+    Raises:
+        HTTPException: If service not initialized
     """
-    return ImageService(image_manager=image_manager)
+    try:
+        return request.app.state.image_service
+    except AttributeError as e:
+        logger.error(f"ImageService not initialized in app state: {e}")
+        raise HTTPException(
+            status_code=500, detail="Internal server error: ImageService not initialized"
+        )
 
 
-def get_vision_service(
-    image_manager: ImageManager = Depends(get_image_manager),
-    template_manager: TemplateManager = Depends(get_template_manager),
-) -> VisionService:
+def get_vision_service(request: Request) -> VisionService:
     """
-    Get vision service instance.
+    Get singleton VisionService instance from app state.
+
+    Services are initialized once at startup in the lifespan handler
+    and reused across all requests for optimal performance.
 
     Args:
-        image_manager: Image manager dependency
-        template_manager: Template manager dependency
+        request: FastAPI request object
 
     Returns:
-        VisionService instance
+        VisionService singleton instance
+
+    Raises:
+        HTTPException: If service not initialized
     """
-    return VisionService(
-        image_manager=image_manager,
-        template_manager=template_manager,
-    )
+    try:
+        return request.app.state.vision_service
+    except AttributeError as e:
+        logger.error(f"VisionService not initialized in app state: {e}")
+        raise HTTPException(
+            status_code=500, detail="Internal server error: VisionService not initialized"
+        )

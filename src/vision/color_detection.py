@@ -4,7 +4,6 @@ Color detection algorithms for machine vision.
 Provides automatic dominant color detection using histogram analysis.
 """
 
-import logging
 from typing import Dict, Optional
 
 import cv2
@@ -13,15 +12,15 @@ import numpy as np
 from common.base import ROI, Point
 from common.enums import VisionObjectType
 from schemas import VisionObject
+from vision.base_detector import BaseDetector
 
 
-class ColorDetector:
+class ColorDetector(BaseDetector):
     """Color detection processor using histogram analysis."""
 
     def __init__(self):
         """Initialize color detector."""
-
-        self.logger = logging.getLogger(__name__)
+        super().__init__()
 
     def detect(
         self,

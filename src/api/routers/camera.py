@@ -127,10 +127,6 @@ async def disconnect_camera(camera_id: str, camera_service=Depends(get_camera_se
     return {"success": True, "message": f"Camera {camera_id} disconnected"}
 
 
-# Store active streams to limit concurrent connections
-active_streams = {}
-
-
 @router.get("/stream/{camera_id:path}")
 async def stream_mjpeg(
     camera_id: str, camera_manager=Depends(get_camera_manager), request: Request = None
@@ -143,6 +139,7 @@ async def stream_mjpeg(
     FPS: 15
     """
     config = request.app.state.config if request else {}
+    active_streams = request.app.state.active_streams
 
     # Check if stream already exists for another camera (single stream limitation)
     if active_streams and camera_id not in active_streams:
@@ -219,8 +216,9 @@ async def stream_mjpeg(
 
 
 @router.post("/stream/stop/{camera_id:path}")
-async def stop_stream(camera_id: str) -> dict:
+async def stop_stream(camera_id: str, request: Request) -> dict:
     """Stop MJPEG stream for a camera"""
+    active_streams = request.app.state.active_streams
     if camera_id in active_streams:
         active_streams[camera_id] = False
         return {"success": True, "message": f"Stream stopped for camera {camera_id}"}

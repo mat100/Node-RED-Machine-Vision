@@ -95,9 +95,7 @@ class TestArucoReferenceAPI:
             assert data["reference_object"]["metadata"]["origin"] == origin
             assert "origin_point_px" in data["reference_object"]["metadata"]
 
-    def test_aruco_reference_single_mode_rotation_references(
-        self, client, captured_image_id
-    ):
+    def test_aruco_reference_single_mode_rotation_references(self, client, captured_image_id):
         """Test SINGLE mode with different rotation reference configurations"""
         rotation_refs = ["marker_rotation", "image_axes"]
 
@@ -267,7 +265,10 @@ class TestArucoReferenceAPI:
                 },
                 "plane_config": {  # Wrong config for SINGLE mode
                     "marker_ids": {
-                        "top_left": 0, "top_right": 1, "bottom_right": 2, "bottom_left": 3
+                        "top_left": 0,
+                        "top_right": 1,
+                        "bottom_right": 2,
+                        "bottom_left": 3,
                     },
                     "width_mm": 200.0,
                     "height_mm": 150.0,

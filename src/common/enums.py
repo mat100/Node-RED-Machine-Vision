@@ -128,3 +128,4 @@ class CameraType(str, Enum):
     USB = "usb"
     IP = "ip"
     FILE = "file"
+    TEST = "test"

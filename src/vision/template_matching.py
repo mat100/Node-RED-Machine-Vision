@@ -4,7 +4,6 @@ Template matching algorithms for machine vision.
 Provides template matching using OpenCV with multiple correlation methods.
 """
 
-import logging
 from typing import Any, Dict
 
 import cv2
@@ -13,15 +12,15 @@ import numpy as np
 from common.base import ROI, Point
 from common.enums import VisionObjectType
 from schemas import VisionObject
+from vision.base_detector import BaseDetector
 
 
-class TemplateDetector:
+class TemplateDetector(BaseDetector):
     """Template matching processor using OpenCV methods."""
 
     def __init__(self):
         """Initialize template detector."""
-
-        self.logger = logging.getLogger(__name__)
+        super().__init__()
 
     def detect(
         self,

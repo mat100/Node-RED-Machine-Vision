@@ -61,17 +61,13 @@ class TestSingleConfig:
         rotation_refs = ["marker_rotation", "image_axes"]
 
         for rotation_ref in rotation_refs:
-            config = SingleConfig(
-                marker_id=0, marker_size_mm=50.0, rotation_reference=rotation_ref
-            )
+            config = SingleConfig(marker_id=0, marker_size_mm=50.0, rotation_reference=rotation_ref)
             assert config.rotation_reference == rotation_ref
 
     def test_single_config_invalid_rotation_reference(self):
         """Test validation error for invalid rotation_reference"""
         with pytest.raises(ValidationError) as exc_info:
-            SingleConfig(
-                marker_id=0, marker_size_mm=50.0, rotation_reference="invalid_ref"
-            )
+            SingleConfig(marker_id=0, marker_size_mm=50.0, rotation_reference="invalid_ref")
 
         error = exc_info.value
         assert "rotation_reference" in str(error).lower()
@@ -336,8 +332,7 @@ class TestArucoReferenceResponse:
 
     def test_response_basic(self):
         """Test basic response creation"""
-        from common.base import Point, ROI
-
+        from common.base import ROI, Point
         from schemas import VisionObject, VisionObjectType
 
         ref_obj = ReferenceObject(
@@ -370,7 +365,7 @@ class TestArucoReferenceResponse:
     def test_response_reference_object_required(self):
         """Test that reference_object is required"""
         from common.base import ROI
-        from schemas import VisionObject, VisionObjectType, Point
+        from schemas import Point, VisionObject, VisionObjectType
 
         marker = VisionObject(
             object_id="aruco_0",

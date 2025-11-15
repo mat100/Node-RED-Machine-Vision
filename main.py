@@ -13,7 +13,6 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
 # Suppress ffmpeg/libav H.264 decoder warnings
 # These are cosmetic errors that occur when starting H.264 streams mid-stream
@@ -36,6 +35,11 @@ from core.camera_manager import CameraManager  # noqa: E402
 from core.image_manager import ImageManager  # noqa: E402
 from core.template_manager import TemplateManager  # noqa: E402
 
+# Import services  # noqa: E402
+from services.camera_service import CameraService  # noqa: E402
+from services.image_service import ImageService  # noqa: E402
+from services.vision_service import VisionService  # noqa: E402
+
 # Get configuration
 settings = get_settings()
 
@@ -52,10 +56,13 @@ try:
 except Exception:
     pass  # watchfiles not installed (production mode)
 
-# Initialize managers
+# Initialize managers and services (set to None, initialized in lifespan)
 image_manager = None
 camera_manager = None
 template_manager = None
+vision_service = None
+camera_service = None
+image_service = None
 shutdown_event = asyncio.Event()
 
 
@@ -63,6 +70,7 @@ shutdown_event = asyncio.Event()
 async def lifespan(app: FastAPI):
     """Manage application lifecycle"""
     global image_manager, camera_manager, template_manager
+    global vision_service, camera_service, image_service
 
     # Startup
     logger.info("Starting Machine Vision Flow server...")
@@ -84,12 +92,33 @@ async def lifespan(app: FastAPI):
 
     logger.info("All managers initialized successfully")
 
-    # Store managers in app state for access by routers
+    # Initialize services as singletons (performance optimization)
+    vision_service = VisionService(
+        image_manager=image_manager,
+        template_manager=template_manager,
+    )
+
+    camera_service = CameraService(
+        camera_manager=camera_manager,
+        image_manager=image_manager,
+    )
+
+    image_service = ImageService(image_manager=image_manager)
+
+    logger.info("All services initialized successfully")
+
+    # Store managers and services in app state for access by routers
     app.state.image_manager = image_manager
     app.state.camera_manager = camera_manager
     app.state.template_manager = template_manager
+    app.state.vision_service = vision_service
+    app.state.camera_service = camera_service
+    app.state.image_service = image_service
     app.state.config = settings.to_dict()
     app.state.debug = settings.system.debug
+
+    # Initialize active streams tracking (thread-safe dict)
+    app.state.active_streams = {}
 
     yield
 
@@ -164,7 +193,7 @@ async def root():
 async def health_check():
     return {
         "status": "healthy",
-        "services": {
+        "managers": {
             "image_manager": hasattr(app.state, "image_manager")
             and app.state.image_manager is not None,
             "camera_manager": hasattr(app.state, "camera_manager")
@@ -172,16 +201,18 @@ async def health_check():
             "template_manager": hasattr(app.state, "template_manager")
             and app.state.template_manager is not None,
         },
+        "services": {
+            "vision_service": hasattr(app.state, "vision_service")
+            and app.state.vision_service is not None,
+            "camera_service": hasattr(app.state, "camera_service")
+            and app.state.camera_service is not None,
+            "image_service": hasattr(app.state, "image_service")
+            and app.state.image_service is not None,
+        },
     }
 
 
-# Error handler
-@app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
-    logger.error(f"Global exception: {exc}", exc_info=True)
-    return JSONResponse(status_code=500, content={"detail": f"Internal server error: {str(exc)}"})
-
-
+# Note: Exception handlers are registered via register_exception_handlers() call above
 # Note: Managers are set in lifespan handler above
 
 
