@@ -10,9 +10,15 @@ This module contains fundamental data models used throughout the vision system:
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    pass
+
+# Import ReferenceObject directly (not under TYPE_CHECKING) for Pydantic
+from schemas.reference import ReferenceObject
 
 
 class ROI(BaseModel):
@@ -260,6 +266,14 @@ class VisionObject(BaseModel):
     perimeter: Optional[float] = Field(None, description="Perimeter in pixels")
     rotation: Optional[float] = Field(None, description="Rotation in degrees (0-360)")
 
+    # Plane coordinates (when reference frame is applied)
+    plane_position: Optional[Point] = Field(
+        None, description="Position in reference plane coordinates (units from reference_object)"
+    )
+    plane_rotation: Optional[float] = Field(
+        None, description="Rotation in reference plane (degrees, when reference applied)"
+    )
+
     # Type-specific properties
     properties: Dict[str, Any] = Field(default_factory=dict, description="Type-specific properties")
 
@@ -268,8 +282,45 @@ class VisionObject(BaseModel):
 
 
 class VisionResponse(BaseModel):
-    """Simplified response for all vision processing APIs"""
+    """
+    Simplified response for all vision processing APIs.
+
+    Contains detected objects, visualization thumbnail, and optional reference
+    frame for coordinate transformation (when using single/plane detection modes).
+    """
 
     objects: List[VisionObject] = Field(default_factory=list, description="List of vision objects")
     thumbnail_base64: str = Field(..., description="Base64-encoded thumbnail with visualization")
+    processing_time_ms: int = Field(..., description="Processing time in milliseconds")
+    reference_object: Optional[ReferenceObject] = Field(
+        None,
+        description=(
+            "Reference frame for coordinate transformation (present when using "
+            "ArUco single or plane detection modes)"
+        ),
+    )
+
+
+class ArucoReferenceResponse(BaseModel):
+    """
+    Response for ArUco reference frame creation.
+
+    Contains the created reference object, detected markers used for calibration,
+    visualization thumbnail, and processing time.
+    """
+
+    reference_object: ReferenceObject = Field(
+        ...,
+        description=(
+            "Reference frame created from ArUco markers. Contains homography matrix "
+            "and metadata for transforming coordinates to real-world units."
+        ),
+    )
+    markers: List[VisionObject] = Field(
+        ...,
+        description="Detected ArUco markers used to create the reference frame",
+    )
+    thumbnail_base64: str = Field(
+        ..., description="Base64-encoded thumbnail with markers visualized"
+    )
     processing_time_ms: int = Field(..., description="Processing time in milliseconds")

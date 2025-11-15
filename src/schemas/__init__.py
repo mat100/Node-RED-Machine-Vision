@@ -19,6 +19,7 @@ Note: "schemas" (not "models") follows FastAPI best practices:
 from core.enums import (
     AngleRange,
     ArucoDict,
+    ArucoReferenceMode,
     ColorMethod,
     EdgeMethod,
     InspectionResult,
@@ -31,6 +32,7 @@ from core.enums import (
 # This eliminates circular dependencies with vision modules
 from schemas.params import (
     ArucoDetectionParams,
+    ArucoReferenceParams,
     ColorDetectionParams,
     EdgeDetectionParams,
     RotationDetectionParams,
@@ -44,10 +46,13 @@ from .base import BaseDetectionParams
 from .camera import CameraConnectRequest, CameraInfo, CaptureParams, CaptureRequest
 
 # Common models (core data structures)
-from .common import ROI, Point, Size, VisionObject, VisionResponse
+from .common import ROI, ArucoReferenceResponse, Point, Size, VisionObject, VisionResponse
 
 # Image processing models
 from .image import ImageImportRequest, ROIExtractRequest
+
+# Reference frame models
+from .reference import PlaneConfig, ReferenceObject, SingleConfig
 
 # System models
 from .system import DebugSettings, PerformanceMetrics, SystemStatus
@@ -58,6 +63,7 @@ from .template import TemplateInfo, TemplateLearnRequest, TemplateUploadResponse
 # Vision processing request models
 from .vision import (
     ArucoDetectRequest,
+    ArucoReferenceRequest,
     ColorDetectRequest,
     EdgeDetectRequest,
     RotationDetectRequest,
@@ -72,6 +78,7 @@ __all__ = [
     "Size",
     "VisionObject",
     "VisionResponse",
+    "ArucoReferenceResponse",
     # Camera models
     "CameraInfo",
     "CameraConnectRequest",
@@ -86,6 +93,7 @@ __all__ = [
     "EdgeDetectRequest",
     "ColorDetectRequest",
     "ArucoDetectRequest",
+    "ArucoReferenceRequest",
     "RotationDetectRequest",
     # System models
     "SystemStatus",
@@ -94,9 +102,14 @@ __all__ = [
     # Image models
     "ROIExtractRequest",
     "ImageImportRequest",
+    # Reference frame models
+    "SingleConfig",
+    "PlaneConfig",
+    "ReferenceObject",
     # Enums (re-exported from core.enums)
     "AngleRange",
     "ArucoDict",
+    "ArucoReferenceMode",
     "ColorMethod",
     "EdgeMethod",
     "InspectionResult",
@@ -109,6 +122,7 @@ __all__ = [
     "EdgeDetectionParams",
     "ColorDetectionParams",
     "ArucoDetectionParams",
+    "ArucoReferenceParams",
     "RotationDetectionParams",
     "TemplateMatchParams",
 ]

@@ -8,17 +8,18 @@ NOTE: ROI geometric operations (intersection, union, etc.) are in the ROI model 
 """
 
 import logging
-from typing import Dict, Optional, Union
+from typing import TYPE_CHECKING, Dict, Optional, Union
 
 import numpy as np
 
-from schemas import ROI
+if TYPE_CHECKING:
+    from schemas import ROI
 
 logger = logging.getLogger(__name__)
 
 
 def extract_roi(
-    image: np.ndarray, roi: Union[ROI, Dict], safe_mode: bool = True, padding_value: int = 0
+    image: np.ndarray, roi: Union["ROI", Dict], safe_mode: bool = True, padding_value: int = 0
 ) -> Optional[np.ndarray]:
     """
     Extract ROI from image.
@@ -32,6 +33,9 @@ def extract_roi(
     Returns:
         Extracted ROI or None if invalid
     """
+    # Lazy import to avoid circular dependency
+    from schemas import ROI
+
     # Convert to ROI object if needed
     if isinstance(roi, dict):
         roi = ROI.from_dict(roi)

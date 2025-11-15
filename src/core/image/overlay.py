@@ -5,6 +5,8 @@ Provides consistent visualization of detection results across different
 vision algorithms (template matching, edge detection, color detection).
 """
 
+from __future__ import annotations
+
 from typing import List, Optional, Tuple
 
 import cv2

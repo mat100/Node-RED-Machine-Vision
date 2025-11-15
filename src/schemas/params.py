@@ -6,10 +6,20 @@ vision detection modules. This module eliminates circular dependencies
 by keeping all parameter schemas in the schemas/ package.
 """
 
-from pydantic import Field
+from typing import Optional
 
-from core.enums import AngleRange, ArucoDict, ColorMethod, RotationMethod, TemplateMethod
+from pydantic import Field, root_validator
+
+from core.enums import (
+    AngleRange,
+    ArucoDict,
+    ArucoReferenceMode,
+    ColorMethod,
+    RotationMethod,
+    TemplateMethod,
+)
 from schemas.base import BaseDetectionParams
+from schemas.reference import PlaneConfig, SingleConfig
 
 
 class EdgeDetectionParams(BaseDetectionParams):
@@ -213,16 +223,17 @@ class ColorDetectionParams(BaseDetectionParams):
 
 class ArucoDetectionParams(BaseDetectionParams):
     """
-    ArUco marker detection parameters.
+    ArUco marker detection parameters (MARKERS mode only).
 
-    ArUco markers are fiducial markers used for camera calibration,
-    object tracking, and pose estimation.
+    This endpoint detects all visible ArUco markers without creating a reference frame.
+    For reference frame creation, use the aruco-reference endpoint with ArucoReferenceParams.
     """
 
     dictionary: ArucoDict = Field(
         default=ArucoDict.DICT_4X4_50,
         description="ArUco dictionary type (defines marker set and size)",
     )
+
     # Future: můžeme přidat detector params:
     # adaptive_thresh_constant: float = Field(default=7.0, ge=0)
     # min_marker_perimeter_rate: float = Field(default=0.03, ge=0, le=1)
@@ -271,3 +282,57 @@ class TemplateMatchParams(BaseDetectionParams):
     scale_steps: int = Field(
         default=5, ge=2, le=20, description="Number of scale steps for multi-scale matching"
     )
+
+
+class ArucoReferenceParams(BaseDetectionParams):
+    """
+    ArUco reference frame parameters.
+
+    Creates reference coordinate system from ArUco markers for transforming
+    other vision objects from pixel space to real-world coordinates.
+
+    Supports two modes:
+    - SINGLE: Single marker with known size → affine transform (uniform scaling)
+    - PLANE: Four markers at corners → perspective homography transform
+    """
+
+    dictionary: ArucoDict = Field(
+        default=ArucoDict.DICT_4X4_50,
+        description="ArUco dictionary type (defines marker set and size)",
+    )
+
+    mode: ArucoReferenceMode = Field(
+        description="Reference mode: single (1-marker) or plane (4-marker)",
+    )
+
+    single_config: Optional[SingleConfig] = Field(
+        default=None,
+        description="Single marker configuration (required when mode=single)",
+    )
+
+    plane_config: Optional[PlaneConfig] = Field(
+        default=None,
+        description="Plane configuration (required when mode=plane)",
+    )
+
+    @root_validator
+    def validate_mode_config(cls, values):
+        """Validate that required config is provided for each mode."""
+        mode = values.get("mode")
+        single_config = values.get("single_config")
+        plane_config = values.get("plane_config")
+
+        if mode == ArucoReferenceMode.SINGLE and single_config is None:
+            raise ValueError("single_config is required when mode=single")
+
+        if mode == ArucoReferenceMode.PLANE and plane_config is None:
+            raise ValueError("plane_config is required when mode=plane")
+
+        # Validate only correct config is provided
+        if mode == ArucoReferenceMode.SINGLE and plane_config is not None:
+            raise ValueError("plane_config should not be provided when mode=single")
+
+        if mode == ArucoReferenceMode.PLANE and single_config is not None:
+            raise ValueError("single_config should not be provided when mode=plane")
+
+        return values

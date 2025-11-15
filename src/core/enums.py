@@ -71,6 +71,27 @@ class ArucoDict(str, Enum):
     DICT_ARUCO_ORIGINAL = "DICT_ARUCO_ORIGINAL"
 
 
+class ArucoDetectionMode(str, Enum):
+    """
+    ArUco detection modes (internal use only by ArucoDetector).
+
+    Note: API users should use separate endpoints instead:
+    - /api/vision/aruco-detect (MARKERS mode)
+    - /api/vision/aruco-reference (SINGLE/PLANE modes)
+    """
+
+    MARKERS = "markers"  # Detect all markers (no reference frame)
+    SINGLE = "single"  # Single marker reference with scale
+    PLANE = "plane"  # 4-marker plane reference with homography
+
+
+class ArucoReferenceMode(str, Enum):
+    """ArUco reference frame modes (for aruco-reference endpoint)."""
+
+    SINGLE = "single"  # Single marker reference with uniform scaling
+    PLANE = "plane"  # 4-marker plane reference with perspective homography
+
+
 # Rotation detection enums
 class RotationMethod(str, Enum):
     """Rotation detection methods."""

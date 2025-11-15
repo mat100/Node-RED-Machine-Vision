@@ -6,7 +6,7 @@ template matching, edge detection, and other computer vision tasks.
 """
 
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from api.exceptions import ImageNotFoundException, TemplateNotFoundException
 from core.image import extract_roi
@@ -25,6 +25,9 @@ from schemas import (
 from vision.aruco_detection import ArucoDetector
 from vision.color_detection import ColorDetector
 from vision.rotation_detection import RotationDetector
+
+if TYPE_CHECKING:
+    from schemas import ArucoReferenceParams, ReferenceObject
 
 logger = logging.getLogger(__name__)
 
@@ -146,9 +149,10 @@ class VisionService:
         template_id: str,
         roi: Optional[Dict],
         params: TemplateMatchParams,
+        reference_object: Optional["ReferenceObject"] = None,
     ) -> Tuple[List[VisionObject], str, int]:
         """
-        Perform template matching on an image.
+        Perform template matching with optional reference frame transformation.
 
         Args:
             image_id: Image identifier
@@ -157,6 +161,7 @@ class VisionService:
             roi: Optional region of interest to limit search area
                 (dict with x, y, width, height)
             params: Template matching parameters (includes template_id)
+            reference_object: Optional reference frame for coordinate transformation
 
         Returns:
             Tuple of (detected_objects, thumbnail_base64, processing_time_ms)
@@ -189,7 +194,16 @@ class VisionService:
             roi=roi,
         )
 
-        logger.debug(f"Template matching: {len(result['objects'])} matches in {processing_time}ms")
+        # Apply reference frame transformation if provided
+        if reference_object is not None:
+            from core.image.transform import apply_reference_transform_batch
+
+            result["objects"] = apply_reference_transform_batch(result["objects"], reference_object)
+
+        logger.debug(
+            f"Template matching: {len(result['objects'])} matches in {processing_time}ms "
+            f"(reference={reference_object is not None})"
+        )
 
         return result["objects"], thumbnail_base64, processing_time
 
@@ -290,9 +304,10 @@ class VisionService:
         contour: Optional[list],
         expected_color: Optional[str],
         params: Optional[ColorDetectionParams],
+        reference_object: Optional["ReferenceObject"] = None,
     ) -> Tuple[List[VisionObject], str, int]:
         """
-        Perform color detection on an image.
+        Perform color detection with optional reference frame transformation.
 
         Args:
             image_id: Image identifier
@@ -300,6 +315,7 @@ class VisionService:
             contour: Optional contour points for masking
             expected_color: Expected color name (or None to just detect)
             params: Color detection parameters (validated Pydantic model, or None for defaults)
+            reference_object: Optional reference frame for coordinate transformation
 
         Returns:
             Tuple of (detected_objects, thumbnail_base64, processing_time_ms)
@@ -335,11 +351,18 @@ class VisionService:
             roi=None,  # ColorDetector handles ROI internally
         )
 
+        # Apply reference frame transformation if provided
+        if reference_object is not None:
+            from core.image.transform import apply_reference_transform_batch
+
+            result["objects"] = apply_reference_transform_batch(result["objects"], reference_object)
+
         detected_object = result["objects"][0]
 
         logger.debug(
             f"Color detection completed: {detected_object.properties['dominant_color']} "
-            f"({detected_object.confidence*100:.1f}%) in {processing_time}ms"
+            f"({detected_object.confidence*100:.1f}%) in {processing_time}ms "
+            f"(reference={reference_object is not None})"
         )
 
         # Filter result: if expected_color specified and doesn't match, return empty list
@@ -358,7 +381,10 @@ class VisionService:
         params: Optional[ArucoDetectionParams],
     ) -> Tuple[List[VisionObject], str, int]:
         """
-        Detect ArUco markers in image.
+        Detect ArUco markers in image (MARKERS mode only).
+
+        Detects all visible ArUco markers in the image without creating
+        a reference frame. For reference frame creation, use aruco_reference().
 
         Args:
             image_id: ID of the image to process
@@ -378,12 +404,22 @@ class VisionService:
         # Convert params to dict (all defaults already applied by Pydantic!)
         params_dict = params.to_dict()
 
-        # Extract dictionary parameter
+        # Extract parameters for detector
         dictionary_str = enum_to_string(params.dictionary)
 
-        # Create detector function
+        # Force MARKERS mode
+        mode = "markers"
+
+        # Create detector function (no configs needed for MARKERS mode)
         def detect_func(image):
-            return self.aruco_detector.detect(image, dictionary=dictionary_str, params=params_dict)
+            return self.aruco_detector.detect(
+                image,
+                dictionary=dictionary_str,
+                mode=mode,
+                single_config=None,
+                plane_config=None,
+                params=params_dict,
+            )
 
         # Execute using template method
         result, thumbnail_base64, processing_time = self._execute_detection(
@@ -394,10 +430,80 @@ class VisionService:
 
         logger.debug(
             f"ArUco detection completed: {len(result['objects'])} markers "
-            f"in {processing_time}ms"
+            f"in {processing_time}ms (mode=markers)"
         )
 
         return result["objects"], thumbnail_base64, processing_time
+
+    def aruco_reference(
+        self,
+        image_id: str,
+        roi: Optional[Dict],
+        params: "ArucoReferenceParams",
+    ) -> Tuple["ReferenceObject", List[VisionObject], str, int]:
+        """
+        Create reference frame from ArUco markers (SINGLE or PLANE mode).
+
+        Detects ArUco markers and creates a coordinate transformation reference
+        frame for converting pixel coordinates to real-world units.
+
+        Args:
+            image_id: ID of the image to process
+            roi: Optional region of interest to search in (dict with x, y, width, height)
+            params: ArUco reference parameters (validated Pydantic model, required)
+
+        Returns:
+            (reference_object, detected_markers, thumbnail_base64, processing_time_ms)
+
+        Raises:
+            ImageNotFoundException: If image not found
+            ValueError: If required markers not found or invalid configuration
+        """
+        # Convert params to dict
+        params_dict = params.to_dict()
+
+        # Extract parameters for detector
+        dictionary_str = enum_to_string(params.dictionary)
+        mode = enum_to_string(params.mode)
+
+        # Convert Pydantic models to dicts for detector
+        single_config_dict = params.single_config.dict() if params.single_config else None
+        plane_config_dict = params.plane_config.dict() if params.plane_config else None
+
+        # Create detector function
+        def detect_func(image):
+            return self.aruco_detector.detect(
+                image,
+                dictionary=dictionary_str,
+                mode=mode,
+                single_config=single_config_dict,
+                plane_config=plane_config_dict,
+                params=params_dict,
+            )
+
+        # Execute using template method
+        result, thumbnail_base64, processing_time = self._execute_detection(
+            image_id=image_id,
+            detector_func=detect_func,
+            roi=roi,
+        )
+
+        # Extract reference_object (must be present for SINGLE/PLANE modes)
+        reference_object = result.get("reference_object")
+        if reference_object is None:
+            raise ValueError(
+                f"Failed to create reference frame in {mode} mode. "
+                "Check that required markers are visible and correctly configured."
+            )
+
+        markers = result["objects"]
+
+        logger.debug(
+            f"ArUco reference created: {len(markers)} markers detected, "
+            f"reference type={reference_object.type} in {processing_time}ms"
+        )
+
+        return reference_object, markers, thumbnail_base64, processing_time
 
     def rotation_detect(
         self,
@@ -405,15 +511,17 @@ class VisionService:
         contour: List,
         roi: Optional[Dict[str, int]],
         params: Optional[RotationDetectionParams],
+        reference_object: Optional["ReferenceObject"] = None,
     ) -> Tuple[List[VisionObject], str, int]:
         """
-        Detect rotation angle from contour.
+        Detect rotation angle from contour with optional reference frame transformation.
 
         Args:
             image_id: ID of the image (for visualization)
             contour: Contour points [[x1,y1], [x2,y2], ...]
             roi: Optional ROI for visualization context
             params: Rotation detection parameters (validated Pydantic model, or None for defaults)
+            reference_object: Optional reference frame for coordinate transformation
 
         Returns:
             (detected_objects, thumbnail_base64, processing_time_ms)
@@ -442,11 +550,18 @@ class VisionService:
             roi=None,  # RotationDetector handles ROI for visualization
         )
 
+        # Apply reference frame transformation if provided
+        if reference_object is not None:
+            from core.image.transform import apply_reference_transform_batch
+
+            result["objects"] = apply_reference_transform_batch(result["objects"], reference_object)
+
         detected_object = result["objects"][0]
 
         logger.debug(
             f"Rotation detection completed: {detected_object.rotation:.1f}° "
-            f"({params.method.value}) in {processing_time}ms"
+            f"({params.method.value}) in {processing_time}ms "
+            f"(reference={reference_object is not None})"
         )
 
         return result["objects"], thumbnail_base64, processing_time

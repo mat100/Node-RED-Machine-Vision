@@ -10,7 +10,7 @@ This consistency reduces code duplication and makes the API predictable.
 """
 
 import logging
-from typing import Callable, List, Optional
+from typing import Callable, Optional
 
 from fastapi import APIRouter, Depends
 
@@ -20,11 +20,12 @@ from core.image_manager import ImageManager
 from schemas import (
     ROI,
     ArucoDetectRequest,
+    ArucoReferenceRequest,
+    ArucoReferenceResponse,
     ColorDetectRequest,
     EdgeDetectRequest,
     RotationDetectRequest,
     TemplateMatchRequest,
-    VisionObject,
     VisionResponse,
 )
 
@@ -37,7 +38,7 @@ def execute_vision_detection(
     image_id: str,
     roi: Optional[ROI],
     image_manager: ImageManager,
-    detection_callable: Callable[[Optional[dict]], tuple[List[VisionObject], str, int]],
+    detection_callable: Callable,
 ) -> VisionResponse:
     """
     Unified helper for executing vision detection endpoints.
@@ -49,8 +50,10 @@ def execute_vision_detection(
         image_id: Image ID to process
         roi: Optional ROI from request
         image_manager: ImageManager instance for validation
-        detection_callable: Service method to call, receives roi_dict and returns
-                           (objects, thumbnail_base64, processing_time_ms)
+        detection_callable: Service method to call, receives roi_dict and returns:
+                           - Standard: (objects, thumbnail_base64, processing_time_ms)
+                           - With reference: (objects, thumbnail_base64,
+                             processing_time_ms, reference_object)
 
     Returns:
         VisionResponse with detection results
@@ -59,13 +62,21 @@ def execute_vision_detection(
     roi_dict = validate_vision_request(image_id, roi, image_manager)
 
     # Execute detection (service handles all logic)
-    detected_objects, thumbnail_base64, processing_time = detection_callable(roi_dict)
+    result = detection_callable(roi_dict)
+
+    # Handle both 3-tuple and 4-tuple returns (for backwards compatibility)
+    if len(result) == 4:
+        detected_objects, thumbnail_base64, processing_time, reference_object = result
+    else:
+        detected_objects, thumbnail_base64, processing_time = result
+        reference_object = None
 
     # Unified response construction
     return VisionResponse(
         objects=detected_objects,
         thumbnail_base64=thumbnail_base64,
         processing_time_ms=processing_time,
+        reference_object=reference_object,
     )
 
 
@@ -94,6 +105,7 @@ async def template_match(
             template_id=request.params.template_id,
             roi=roi,
             params=request.params,
+            reference_object=request.reference_object,
         ),
     )
 
@@ -155,6 +167,7 @@ async def color_detect(
             contour=request.contour,
             expected_color=request.expected_color,
             params=request.params,
+            reference_object=request.reference_object,
         ),
     )
 
@@ -167,7 +180,10 @@ async def aruco_detect(
     image_manager=Depends(get_image_manager),
 ) -> VisionResponse:
     """
-    Detect ArUco fiducial markers in image.
+    Detect ArUco fiducial markers in image (MARKERS mode only).
+
+    Detects all visible ArUco markers without creating a reference frame.
+    For reference frame creation, use /aruco-reference endpoint.
 
     INPUT constraints:
     - roi: Optional region to limit marker search area
@@ -187,6 +203,53 @@ async def aruco_detect(
             roi=roi,
             params=request.params,
         ),
+    )
+
+
+@router.post("/aruco-reference")
+@safe_endpoint
+async def aruco_reference(
+    request: ArucoReferenceRequest,
+    vision_service=Depends(get_vision_service),
+    image_manager=Depends(get_image_manager),
+) -> ArucoReferenceResponse:
+    """
+    Create reference frame from ArUco markers (SINGLE or PLANE mode).
+
+    Creates a coordinate transformation reference frame from ArUco markers
+    for converting pixel coordinates to real-world units (millimeters).
+
+    MODES:
+    - SINGLE: One marker with known size → affine transform (uniform scaling)
+    - PLANE: Four markers at corners → perspective homography transform
+
+    INPUT constraints:
+    - roi: Optional region to limit marker search area
+    - params.mode: Required (single or plane)
+    - params.single_config: Required if mode=single (marker_id, marker_size_mm)
+    - params.plane_config: Required if mode=plane (marker_ids, width_mm, height_mm)
+
+    OUTPUT results:
+    - reference_object: Reference frame with homography matrix and metadata
+    - markers: Detected ArUco markers used for calibration
+    - thumbnail: Visualization with markers highlighted
+    """
+    # Unified validation and ROI conversion
+    roi_dict = validate_vision_request(request.image_id, request.roi, image_manager)
+
+    # Execute reference frame creation
+    reference_object, markers, thumbnail_base64, processing_time = vision_service.aruco_reference(
+        image_id=request.image_id,
+        roi=roi_dict,
+        params=request.params,
+    )
+
+    # Return specialized response
+    return ArucoReferenceResponse(
+        reference_object=reference_object,
+        markers=markers,
+        thumbnail_base64=thumbnail_base64,
+        processing_time_ms=processing_time,
     )
 
 
@@ -216,5 +279,6 @@ async def rotation_detect(
             contour=request.contour,
             roi=roi,
             params=request.params,
+            reference_object=request.reference_object,
         ),
     )

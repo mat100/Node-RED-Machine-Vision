@@ -87,22 +87,22 @@ dev:
 test:
 	@test -d $(VENV) || (echo "Error: venv not found. Run 'make install' first." && exit 1)
 	@echo "Running all tests..."
-	@cd $(PROJECT_ROOT) && PYTHONPATH=$(BACKEND_DIR) $(PYTEST) tests/ -v
+	@cd $(PROJECT_ROOT) && PYTHONPATH=$(BACKEND_DIR)/src $(PYTEST) tests/ -v
 
 test-fast:
 	@test -d $(VENV) || (echo "Error: venv not found. Run 'make install' first." && exit 1)
 	@echo "Running fast tests (skipping slow tests)..."
-	@cd $(PROJECT_ROOT) && PYTHONPATH=$(BACKEND_DIR) $(PYTEST) tests/ -v -m "not slow"
+	@cd $(PROJECT_ROOT) && PYTHONPATH=$(BACKEND_DIR)/src $(PYTEST) tests/ -v -m "not slow"
 
 test-watch:
 	@test -d $(VENV) || (echo "Error: venv not found. Run 'make install' first." && exit 1)
 	@echo "Starting test watch mode (TDD)..."
-	@cd $(PROJECT_ROOT) && PYTHONPATH=$(BACKEND_DIR) $(PYTHON) -m pytest_watch tests/ -- -v
+	@cd $(PROJECT_ROOT) && PYTHONPATH=$(BACKEND_DIR)/src $(PYTHON) -m pytest_watch tests/ -- -v
 
 cov:
 	@test -d $(VENV) || (echo "Error: venv not found. Run 'make install' first." && exit 1)
 	@echo "Running tests with coverage..."
-	@cd $(PROJECT_ROOT) && PYTHONPATH=$(BACKEND_DIR) $(PYTEST) tests/ --cov=src --cov-report=html --cov-report=term
+	@cd $(PROJECT_ROOT) && PYTHONPATH=$(BACKEND_DIR)/src $(PYTEST) tests/ --cov=src --cov-report=html --cov-report=term
 	@echo ""
 	@echo "✓ Coverage report generated: $(PROJECT_ROOT)/htmlcov/index.html"
 	@command -v xdg-open >/dev/null 2>&1 && xdg-open $(PROJECT_ROOT)/htmlcov/index.html || true

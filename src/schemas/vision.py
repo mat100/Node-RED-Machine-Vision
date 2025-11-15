@@ -9,12 +9,13 @@ This module contains request models for various vision detection operations:
 - Rotation detection
 """
 
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import BaseModel, Field, validator
 
 from schemas.params import (
     ArucoDetectionParams,
+    ArucoReferenceParams,
     ColorDetectionParams,
     EdgeDetectionParams,
     RotationDetectionParams,
@@ -22,6 +23,9 @@ from schemas.params import (
 )
 
 from .common import ROI
+
+if TYPE_CHECKING:
+    from schemas.reference import ReferenceObject
 
 
 class TemplateMatchRequest(BaseModel):
@@ -31,6 +35,13 @@ class TemplateMatchRequest(BaseModel):
     roi: Optional[ROI] = Field(None, description="Region of interest to limit search area")
     params: TemplateMatchParams = Field(
         description="Template matching parameters (template_id is required)"
+    )
+    reference_object: Optional["ReferenceObject"] = Field(
+        None,
+        description=(
+            "Optional reference frame for coordinate transformation. "
+            "If provided, adds plane_* properties to detected objects."
+        ),
     )
 
 
@@ -64,6 +75,13 @@ class ColorDetectRequest(BaseModel):
             "kmeans settings, defaults applied if None)"
         ),
     )
+    reference_object: Optional["ReferenceObject"] = Field(
+        None,
+        description=(
+            "Optional reference frame for coordinate transformation. "
+            "If provided, adds plane_* properties to detected objects."
+        ),
+    )
 
 
 class ArucoDetectRequest(BaseModel):
@@ -76,6 +94,19 @@ class ArucoDetectRequest(BaseModel):
         description=(
             "ArUco detection parameters (dictionary type, "
             "detector settings, defaults applied if None)"
+        ),
+    )
+
+
+class ArucoReferenceRequest(BaseModel):
+    """Request for ArUco reference frame creation"""
+
+    image_id: str = Field(..., description="ID of the image to analyze")
+    roi: Optional[ROI] = Field(None, description="Region of interest to search in")
+    params: ArucoReferenceParams = Field(
+        description=(
+            "ArUco reference parameters (mode, dictionary, marker configuration). "
+            "Mode determines if single marker or 4-marker plane is used."
         ),
     )
 
@@ -93,6 +124,13 @@ class RotationDetectRequest(BaseModel):
         None,
         description=(
             "Rotation detection parameters " "(method, angle range, defaults applied if None)"
+        ),
+    )
+    reference_object: Optional["ReferenceObject"] = Field(
+        None,
+        description=(
+            "Optional reference frame for coordinate transformation. "
+            "If provided, adds plane_* properties to detected objects."
         ),
     )
 
