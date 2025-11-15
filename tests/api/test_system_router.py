@@ -40,11 +40,10 @@ class TestSystemRouterAPI:
         assert isinstance(data["uptime"], (int, float))
         assert isinstance(data["active_cameras"], int)
 
-        # Check memory_usage structure
+        # Check memory_usage structure (simplified without psutil)
         memory = data["memory_usage"]
-        assert "process_mb" in memory
-        assert "system_percent" in memory
-        assert "available_mb" in memory
+        assert "buffer_mb" in memory
+        assert "buffer_images" in memory
         assert all(isinstance(v, (int, float)) for v in memory.values())
 
         # Check buffer_usage is a dict
@@ -99,7 +98,8 @@ class TestSystemRouterAPI:
         """Test performance metrics (history tracking was removed, always returns defaults)"""
         # Capture an image
         capture_response = client.post("/api/camera/capture", json={"camera_id": "test"})
-        image_id = capture_response.json()["image_id"]
+        data = capture_response.json()
+        image_id = data["objects"][0]["properties"]["image_id"]
 
         # Perform a vision operation (but history is no longer tracked)
         edge_request = {
@@ -199,21 +199,20 @@ class TestSystemRouterAPI:
         assert uptime2 > uptime1
 
     def test_status_memory_usage_reasonable(self, client):
-        """Test that memory usage values are reasonable"""
+        """Test that memory usage values are reasonable (simplified without psutil)"""
         response = client.get("/api/system/status")
         memory = response.json()["memory_usage"]
 
-        # Memory values should be positive
-        assert memory["process_mb"] > 0
-        assert memory["available_mb"] > 0
-        # System percent should be 0-100
-        assert 0 <= memory["system_percent"] <= 100
+        # Memory values should be non-negative (buffer can be 0 initially)
+        assert memory["buffer_mb"] >= 0
+        assert memory["buffer_images"] >= 0
 
     def test_performance_operations_per_minute(self, client):
         """Test operations per minute (history tracking removed)"""
         # Capture image and run multiple operations
         capture_response = client.post("/api/camera/capture", json={"camera_id": "test"})
-        image_id = capture_response.json()["image_id"]
+        data = capture_response.json()
+        image_id = data["objects"][0]["properties"]["image_id"]
 
         # Run several edge detections (but history is no longer tracked)
         for _ in range(3):

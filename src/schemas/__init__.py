@@ -15,8 +15,8 @@ Note: "schemas" (not "models") follows FastAPI best practices:
 - models/ or db/models/ = ORM/database models (not used in this project)
 """
 
-# Re-export enums from centralized location for convenience (backwards compatibility)
-from core.enums import (
+# Re-export enums from types package for convenience (backwards compatibility)
+from common.enums import (
     AngleRange,
     ArucoDict,
     ArucoReferenceMode,

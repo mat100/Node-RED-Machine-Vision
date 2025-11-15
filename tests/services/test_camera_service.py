@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from api.exceptions import CameraConnectionException, CameraNotFoundException
-from schemas import ROI
+from common.base import ROI
 from services.camera_service import CameraService
 
 
@@ -69,13 +69,15 @@ class TestCameraService:
         mock_image_manager.store.return_value = "test-image-id"
         mock_image_manager.create_thumbnail.return_value = (test_image, "base64-thumb")
 
-        image_id, thumbnail, metadata = service.capture_and_store(camera_id="test")
+        image_id, thumbnail, metadata, width, height = service.capture_and_store(camera_id="test")
 
         assert image_id == "test-image-id"
         assert thumbnail == "base64-thumb"
         assert metadata["camera_id"] == "test"
         assert metadata["width"] == 640
         assert metadata["height"] == 480
+        assert width == 640
+        assert height == 480
         mock_camera_manager.capture.assert_called_once()
         mock_image_manager.store.assert_called_once()
 
@@ -94,7 +96,7 @@ class TestCameraService:
 
         # Mock extract_roi to return the ROI image
         with patch("services.camera_service.extract_roi", return_value=roi_image):
-            image_id, thumbnail, metadata = service.capture_and_store(camera_id="test", roi=roi)
+            image_id, thumbnail, metadata, width, height = service.capture_and_store(camera_id="test", roi=roi)
 
         assert image_id == "test-image-id"
         # Metadata should reflect ROI dimensions
@@ -126,7 +128,7 @@ class TestCameraService:
         mock_image_manager.store.return_value = "test-image-id"
         mock_image_manager.create_thumbnail.return_value = (test_image, "base64-thumb")
 
-        image_id, thumbnail, metadata = service.capture_and_store(camera_id="test")
+        image_id, thumbnail, metadata, width, height = service.capture_and_store(camera_id="test")
 
         assert image_id == "test-image-id"
         mock_camera_manager.create_test_image.assert_called_once()
@@ -168,7 +170,7 @@ class TestCameraService:
         mock_image_manager.create_thumbnail.return_value = (test_image, "base64-thumb")
 
         custom_metadata = {"custom_field": "custom_value", "batch_id": "123"}
-        image_id, thumbnail, metadata = service.capture_and_store(
+        image_id, thumbnail, metadata, width, height = service.capture_and_store(
             camera_id="test", metadata=custom_metadata
         )
 
@@ -185,7 +187,7 @@ class TestCameraServiceIntegration:
     def test_full_capture_workflow(self, camera_service, test_image):
         """Test complete capture workflow with real managers"""
         # Note: This uses real CameraManager with test camera
-        image_id, thumbnail, metadata = camera_service.capture_and_store(camera_id="test")
+        image_id, thumbnail, metadata, width, height = camera_service.capture_and_store(camera_id="test")
 
         assert image_id is not None
         assert len(image_id) > 0
@@ -196,7 +198,7 @@ class TestCameraServiceIntegration:
         """Test capture with ROI using real managers"""
         roi = ROI(x=100, y=100, width=300, height=200)
 
-        image_id, thumbnail, metadata = camera_service.capture_and_store(camera_id="test", roi=roi)
+        image_id, thumbnail, metadata, width, height = camera_service.capture_and_store(camera_id="test", roi=roi)
 
         assert image_id is not None
         # After ROI applied, metadata should reflect ROI dimensions

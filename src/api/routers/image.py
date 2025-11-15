@@ -9,8 +9,9 @@ from fastapi import APIRouter, Depends
 
 from api.dependencies import get_image_service
 from api.exceptions import safe_endpoint
+from common.base import ROI, Point
 from core.image.converters import encode_image_to_base64
-from schemas import ROI, ImageImportRequest, Point, ROIExtractRequest, VisionObject, VisionResponse
+from schemas import ImageImportRequest, ROIExtractRequest, VisionObject, VisionResponse
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ async def extract_roi(
     )
 
     # Create thumbnail directly from the cropped image
-    from core.constants import ImageConstants
+    from common.constants import ImageConstants
 
     # Resize to thumbnail size (max width 320px)
     height, width = roi_image.shape[:2]

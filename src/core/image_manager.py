@@ -12,7 +12,7 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 
-from core.constants import ImageConstants
+from common.constants import ImageConstants
 from core.image.processors import create_thumbnail
 
 logger = logging.getLogger(__name__)

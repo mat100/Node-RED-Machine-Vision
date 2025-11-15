@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 import cv2
 import numpy as np
 
-from core.enums import CameraType
+from common.enums import CameraType
 
 # Suppress H.264 decoder warnings from ffmpeg/libav
 # These occur when starting H.264 streams mid-stream before receiving keyframe
@@ -66,6 +66,12 @@ class Camera:
         """Connect to camera"""
         try:
             with self.lock:
+                # TEST camera doesn't use VideoCapture
+                if self.config.type == CameraType.TEST:
+                    self.connected = True
+                    logger.info(f"Test camera {self.config.id} connected")
+                    return True
+
                 if self.config.type == CameraType.USB:
                     self.cap = cv2.VideoCapture(self.config.source)
                 elif self.config.type == CameraType.IP:
@@ -131,6 +137,52 @@ class Camera:
 
         logger.info(f"Camera {self.config.id} disconnected")
 
+    def _create_test_frame(self) -> np.ndarray:
+        """Create a test frame for TEST camera type"""
+        # Create a simple test image with ArUco markers
+        width, height = self.config.resolution
+        img = np.zeros((height, width, 3), dtype=np.uint8)
+
+        # Add gradient background
+        for i in range(height):
+            img[i, :] = [i * 255 // height, 100, 255 - i * 255 // height]
+
+        # Add ArUco markers for testing
+        try:
+            aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+            marker_size = min(200, width // 8)
+            border_size = marker_size // 4
+            total_size = marker_size + 2 * border_size
+
+            # Generate marker ID 0
+            marker_image = cv2.aruco.generateImageMarker(aruco_dict, 0, marker_size)
+            marker_with_border = np.ones((total_size, total_size), dtype=np.uint8) * 255
+            marker_with_border[
+                border_size : border_size + marker_size, border_size : border_size + marker_size
+            ] = marker_image
+
+            # Place marker in top-left
+            y_pos, x_pos = 50, 50
+            if y_pos + total_size < height and x_pos + total_size < width:
+                img[y_pos : y_pos + total_size, x_pos : x_pos + total_size] = cv2.cvtColor(
+                    marker_with_border, cv2.COLOR_GRAY2BGR
+                )
+        except Exception as e:
+            logger.warning(f"Failed to add ArUco markers to test image: {e}")
+
+        # Add text
+        cv2.putText(
+            img,
+            f"Test Camera: {self.config.id}",
+            (width // 2 - 200, height - 50),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.5,
+            (255, 255, 255),
+            2,
+        )
+
+        return img
+
     def _capture_frame_blocking(self) -> tuple:
         """
         Internal method to capture a frame (blocking).
@@ -150,6 +202,17 @@ class Camera:
         """
         if not self.connected:
             return None
+
+        # TEST camera generates frames directly
+        if self.config.type == CameraType.TEST:
+            try:
+                frame = self._create_test_frame()
+                self.last_frame = frame
+                self.last_capture_time = time.time()
+                return frame
+            except Exception as e:
+                logger.error(f"Failed to create test frame: {e}")
+                return None
 
         # Convert timeout from milliseconds to seconds
         timeout_seconds = self.config.capture_timeout_ms / 1000.0

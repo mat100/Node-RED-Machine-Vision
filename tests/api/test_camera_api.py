@@ -44,15 +44,21 @@ class TestCameraAPI:
         assert response.status_code == 200
         data = response.json()
 
-        assert data["success"] is True
-        assert "image_id" in data
-        assert len(data["image_id"]) > 0
+        # VisionResponse format
+        assert "objects" in data
+        assert len(data["objects"]) == 1
         assert "thumbnail_base64" in data
         assert len(data["thumbnail_base64"]) > 0
-        assert "metadata" in data
-        assert data["metadata"]["camera_id"] == "test"
-        assert data["metadata"]["width"] > 0
-        assert data["metadata"]["height"] > 0
+        assert "processing_time_ms" in data
+
+        # Check vision object
+        obj = data["objects"][0]
+        assert obj["object_type"] == "camera_capture"
+        assert "image_id" in obj["properties"]
+        assert len(obj["properties"]["image_id"]) > 0
+        assert obj["properties"]["camera_id"] == "test"
+        assert obj["bounding_box"]["width"] > 0
+        assert obj["bounding_box"]["height"] > 0
 
     def test_capture_image_with_roi(self, client):
         """Test capturing image with ROI"""
@@ -65,10 +71,13 @@ class TestCameraAPI:
         assert response.status_code == 200
         data = response.json()
 
-        assert data["success"] is True
-        # Note: Test camera returns full image, ROI would be applied for real cameras
-        assert data["metadata"]["width"] > 0
-        assert data["metadata"]["height"] > 0
+        # VisionResponse format
+        assert "objects" in data
+        assert len(data["objects"]) == 1
+        # Note: ROI dimensions should be 300x200
+        obj = data["objects"][0]
+        assert obj["bounding_box"]["width"] == 300
+        assert obj["bounding_box"]["height"] == 200
 
     def test_capture_image_invalid_camera(self, client):
         """Test capturing from non-existent camera falls back to test"""
@@ -77,8 +86,11 @@ class TestCameraAPI:
         # Should still work because of fallback to test image
         assert response.status_code == 200
         data = response.json()
-        assert data["success"] is True
-        assert "image_id" in data
+
+        # VisionResponse format
+        assert "objects" in data
+        assert len(data["objects"]) == 1
+        assert "image_id" in data["objects"][0]["properties"]
 
     def test_get_preview(self, client):
         """Test getting camera preview"""
@@ -120,7 +132,8 @@ class TestCameraAPI:
             response = client.post("/api/camera/capture", json={"camera_id": "test"})
             assert response.status_code == 200
             data = response.json()
-            image_ids.append(data["image_id"])
+            # Extract image_id from VisionResponse
+            image_ids.append(data["objects"][0]["properties"]["image_id"])
 
         # All image IDs should be unique
         assert len(image_ids) == len(set(image_ids))

@@ -13,7 +13,8 @@ class TestArucoReferenceAPI:
         """Capture a test image with ArUco markers"""
         response = client.post("/api/camera/capture", json={"camera_id": "test"})
         assert response.status_code == 200
-        return response.json()["image_id"]
+        data = response.json()
+        return data["objects"][0]["properties"]["image_id"]
 
     def test_aruco_reference_single_mode_basic(self, client, captured_image_id):
         """Test ArUco reference creation with SINGLE marker mode"""
@@ -342,7 +343,8 @@ class TestArucoReferenceIntegration:
         """Capture a test image with ArUco markers"""
         response = client.post("/api/camera/capture", json={"camera_id": "test"})
         assert response.status_code == 200
-        return response.json()["image_id"]
+        data = response.json()
+        return data["objects"][0]["properties"]["image_id"]
 
     @pytest.fixture
     def reference_object(self, client, captured_image_id):
@@ -374,7 +376,7 @@ class TestArucoReferenceIntegration:
         pytest.skip("Requires template setup - tested in full workflow tests")
 
     def test_rotation_detect_with_reference_transform(
-        self, client, captured_image_id, reference_object, edge_contour
+        self, client, captured_image_id, reference_object
     ):
         """Test rotation detection with reference frame transformation"""
         # This test verifies the integration

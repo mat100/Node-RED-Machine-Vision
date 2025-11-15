@@ -12,7 +12,8 @@ class TestVisionAPI:
     def captured_image_id(self, client):
         """Capture an image and return its ID"""
         response = client.post("/api/camera/capture", json={"camera_id": "test"})
-        return response.json()["image_id"]
+        data = response.json()
+        return data["objects"][0]["properties"]["image_id"]
 
     @pytest.fixture
     def template_id(self, client, captured_image_id):

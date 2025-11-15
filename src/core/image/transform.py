@@ -5,14 +5,13 @@ Handles transformation of VisionObject coordinates and properties
 from image space to reference frame space using homography matrices.
 """
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
 import numpy as np
 
+from common.base import Point
 from core.image.geometry import transform_point_homography, transform_rotation_homography
-
-if TYPE_CHECKING:
-    from schemas import ReferenceObject, VisionObject
+from schemas import ReferenceObject, VisionObject
 
 
 def apply_reference_transform(
@@ -35,9 +34,6 @@ def apply_reference_transform(
     Note:
         Modifies the object in place and returns the same object.
     """
-    # Lazy import to avoid circular dependency (schemas imports from core.enums)
-    from schemas.common import Point
-
     # Extract homography matrix
     H = np.array(reference_object.homography_matrix, dtype=np.float64)
 

@@ -13,8 +13,9 @@ from typing import Any, Dict, List, Optional
 import cv2
 import numpy as np
 
-from core.enums import ArucoDetectionMode
-from schemas import ROI, Point, ReferenceObject, VisionObject, VisionObjectType
+from common.base import ROI, Point
+from common.enums import ArucoDetectionMode, VisionObjectType
+from schemas import ReferenceObject, VisionObject
 
 
 class ArucoDetector:

@@ -316,7 +316,7 @@ class TestArucoReferenceRequest:
 
     def test_request_with_roi(self):
         """Test request with ROI"""
-        from schemas import ROI
+        from common.base import ROI
 
         request = ArucoReferenceRequest(
             image_id="test-image-123",
@@ -336,7 +336,9 @@ class TestArucoReferenceResponse:
 
     def test_response_basic(self):
         """Test basic response creation"""
-        from schemas import VisionObject, VisionObjectType, ROI, Point
+        from common.base import Point, ROI
+
+        from schemas import VisionObject, VisionObjectType
 
         ref_obj = ReferenceObject(
             type="single_marker",
@@ -367,7 +369,8 @@ class TestArucoReferenceResponse:
 
     def test_response_reference_object_required(self):
         """Test that reference_object is required"""
-        from schemas import VisionObject, VisionObjectType, ROI, Point
+        from common.base import ROI
+        from schemas import VisionObject, VisionObjectType, Point
 
         marker = VisionObject(
             object_id="aruco_0",

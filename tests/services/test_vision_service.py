@@ -7,7 +7,8 @@ import numpy as np
 import pytest
 
 from api.exceptions import ImageNotFoundException, TemplateNotFoundException
-from schemas import ROI, EdgeDetectionParams, TemplateMatchParams
+from common.base import ROI
+from schemas import EdgeDetectionParams, TemplateMatchParams
 from services.vision_service import VisionService
 
 

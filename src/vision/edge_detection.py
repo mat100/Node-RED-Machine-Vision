@@ -7,9 +7,10 @@ from typing import Any, Dict, Optional
 import cv2
 import numpy as np
 
-from core.constants import VisionConstants
-from core.enums import EdgeMethod
-from schemas import ROI, Point, VisionObject, VisionObjectType
+from common.base import ROI, Point
+from common.constants import VisionConstants
+from common.enums import EdgeMethod, VisionObjectType
+from schemas import VisionObject
 
 
 class EdgeDetector:

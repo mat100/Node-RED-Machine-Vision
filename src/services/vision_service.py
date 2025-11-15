@@ -6,28 +6,31 @@ template matching, edge detection, and other computer vision tasks.
 """
 
 import logging
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from api.exceptions import ImageNotFoundException, TemplateNotFoundException
+from common.base import ROI
+from common.enums import EdgeMethod
 from core.image import extract_roi
+from core.image.transform import apply_reference_transform_batch
 from core.image_manager import ImageManager
 from core.template_manager import TemplateManager
 from core.utils import enum_to_string, parse_enum, timer
 from schemas import (
-    ROI,
     ArucoDetectionParams,
+    ArucoReferenceParams,
     ColorDetectionParams,
     EdgeDetectionParams,
+    ReferenceObject,
     RotationDetectionParams,
     TemplateMatchParams,
     VisionObject,
 )
 from vision.aruco_detection import ArucoDetector
 from vision.color_detection import ColorDetector
+from vision.edge_detection import EdgeDetector
 from vision.rotation_detection import RotationDetector
-
-if TYPE_CHECKING:
-    from schemas import ArucoReferenceParams, ReferenceObject
+from vision.template_matching import TemplateDetector
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +152,7 @@ class VisionService:
         template_id: str,
         roi: Optional[Dict],
         params: TemplateMatchParams,
-        reference_object: Optional["ReferenceObject"] = None,
+        reference_object: Optional[ReferenceObject] = None,
     ) -> Tuple[List[VisionObject], str, int]:
         """
         Perform template matching with optional reference frame transformation.
@@ -170,8 +173,6 @@ class VisionService:
             ImageNotFoundException: If image not found
             TemplateNotFoundException: If template not found
         """
-        from vision.template_matching import TemplateDetector
-
         # Get template first (before detector function)
         template = self.template_manager.get_template(template_id)
         if template is None:
@@ -196,8 +197,6 @@ class VisionService:
 
         # Apply reference frame transformation if provided
         if reference_object is not None:
-            from core.image.transform import apply_reference_transform_batch
-
             result["objects"] = apply_reference_transform_batch(result["objects"], reference_object)
 
         logger.debug(
@@ -250,7 +249,7 @@ class VisionService:
         self,
         image_id: str,
         method: str,
-        params: "EdgeDetectionParams",
+        params: EdgeDetectionParams,
         roi: Optional[Dict] = None,
     ) -> Tuple[List[VisionObject], str, int]:
         """
@@ -269,9 +268,6 @@ class VisionService:
         Raises:
             ImageNotFoundException: If image not found
         """
-        from core.enums import EdgeMethod
-        from vision.edge_detection import EdgeDetector
-
         # Parse method string to enum
         edge_method = parse_enum(method, EdgeMethod, EdgeMethod.CANNY, normalize=True)
 
@@ -304,7 +300,7 @@ class VisionService:
         contour: Optional[list],
         expected_color: Optional[str],
         params: Optional[ColorDetectionParams],
-        reference_object: Optional["ReferenceObject"] = None,
+        reference_object: Optional[ReferenceObject] = None,
     ) -> Tuple[List[VisionObject], str, int]:
         """
         Perform color detection with optional reference frame transformation.
@@ -353,8 +349,6 @@ class VisionService:
 
         # Apply reference frame transformation if provided
         if reference_object is not None:
-            from core.image.transform import apply_reference_transform_batch
-
             result["objects"] = apply_reference_transform_batch(result["objects"], reference_object)
 
         detected_object = result["objects"][0]
@@ -439,8 +433,8 @@ class VisionService:
         self,
         image_id: str,
         roi: Optional[Dict],
-        params: "ArucoReferenceParams",
-    ) -> Tuple["ReferenceObject", List[VisionObject], str, int]:
+        params: ArucoReferenceParams,
+    ) -> Tuple[ReferenceObject, List[VisionObject], str, int]:
         """
         Create reference frame from ArUco markers (SINGLE or PLANE mode).
 
@@ -511,7 +505,7 @@ class VisionService:
         contour: List,
         roi: Optional[Dict[str, int]],
         params: Optional[RotationDetectionParams],
-        reference_object: Optional["ReferenceObject"] = None,
+        reference_object: Optional[ReferenceObject] = None,
     ) -> Tuple[List[VisionObject], str, int]:
         """
         Detect rotation angle from contour with optional reference frame transformation.
@@ -552,8 +546,6 @@ class VisionService:
 
         # Apply reference frame transformation if provided
         if reference_object is not None:
-            from core.image.transform import apply_reference_transform_batch
-
             result["objects"] = apply_reference_transform_batch(result["objects"], reference_object)
 
         detected_object = result["objects"][0]

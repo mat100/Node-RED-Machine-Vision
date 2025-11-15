@@ -8,12 +8,11 @@ NOTE: ROI geometric operations (intersection, union, etc.) are in the ROI model 
 """
 
 import logging
-from typing import TYPE_CHECKING, Dict, Optional, Union
+from typing import Dict, Optional, Union
 
 import numpy as np
 
-if TYPE_CHECKING:
-    from schemas import ROI
+from common.base import ROI
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +32,6 @@ def extract_roi(
     Returns:
         Extracted ROI or None if invalid
     """
-    # Lazy import to avoid circular dependency
-    from schemas import ROI
-
     # Convert to ROI object if needed
     if isinstance(roi, dict):
         roi = ROI.from_dict(roi)

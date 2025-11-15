@@ -16,7 +16,8 @@ class TestTemplateAPI:
     def captured_image_id(self, client):
         """Capture an image for template learning"""
         response = client.post("/api/camera/capture", json={"camera_id": "test"})
-        return response.json()["image_id"]
+        data = response.json()
+        return data["objects"][0]["properties"]["image_id"]
 
     def test_list_templates_empty(self, client):
         """Test listing templates when none exist"""
@@ -195,7 +196,8 @@ class TestTemplateAPI:
         """Test complete template workflow: capture -> learn -> match -> delete"""
         # 1. Capture image
         capture_response = client.post("/api/camera/capture", json={"camera_id": "test"})
-        image_id = capture_response.json()["image_id"]
+        data = capture_response.json()
+        image_id = data["objects"][0]["properties"]["image_id"]
 
         # 2. Learn template
         learn_data = {

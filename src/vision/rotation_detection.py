@@ -8,9 +8,10 @@ from typing import Any, Dict, List, Optional
 import cv2
 import numpy as np
 
-from core.constants import VisionConstants
-from core.enums import AngleRange, RotationMethod
-from schemas import ROI, Point, VisionObject, VisionObjectType
+from common.base import ROI, Point
+from common.constants import VisionConstants
+from common.enums import AngleRange, RotationMethod, VisionObjectType
+from schemas import VisionObject
 
 
 class RotationDetector:

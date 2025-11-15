@@ -3,7 +3,10 @@ Unit tests for coordinate transformation utilities
 """
 
 import pytest
-from schemas import VisionObject, ReferenceObject, Point, ROI
+
+from common.base import Point, ROI
+
+from schemas import ReferenceObject, VisionObject
 from core.image.transform import apply_reference_transform
 
 

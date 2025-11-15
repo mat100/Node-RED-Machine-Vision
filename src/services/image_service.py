@@ -13,10 +13,10 @@ import cv2
 import numpy as np
 
 from api.exceptions import ImageNotFoundException
-from core.constants import ImageConstants
+from common.base import ROI
+from common.constants import ImageConstants
 from core.image import extract_roi
 from core.image_manager import ImageManager
-from schemas import ROI
 
 logger = logging.getLogger(__name__)
 

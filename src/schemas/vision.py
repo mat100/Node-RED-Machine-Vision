@@ -9,10 +9,11 @@ This module contains request models for various vision detection operations:
 - Rotation detection
 """
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, validator
 
+from common.base import ROI
 from schemas.params import (
     ArucoDetectionParams,
     ArucoReferenceParams,
@@ -21,11 +22,7 @@ from schemas.params import (
     RotationDetectionParams,
     TemplateMatchParams,
 )
-
-from .common import ROI
-
-if TYPE_CHECKING:
-    from schemas.reference import ReferenceObject
+from schemas.reference import ReferenceObject
 
 
 class TemplateMatchRequest(BaseModel):
@@ -36,7 +33,7 @@ class TemplateMatchRequest(BaseModel):
     params: TemplateMatchParams = Field(
         description="Template matching parameters (template_id is required)"
     )
-    reference_object: Optional["ReferenceObject"] = Field(
+    reference_object: Optional[ReferenceObject] = Field(
         None,
         description=(
             "Optional reference frame for coordinate transformation. "
@@ -75,7 +72,7 @@ class ColorDetectRequest(BaseModel):
             "kmeans settings, defaults applied if None)"
         ),
     )
-    reference_object: Optional["ReferenceObject"] = Field(
+    reference_object: Optional[ReferenceObject] = Field(
         None,
         description=(
             "Optional reference frame for coordinate transformation. "
@@ -126,7 +123,7 @@ class RotationDetectRequest(BaseModel):
             "Rotation detection parameters " "(method, angle range, defaults applied if None)"
         ),
     )
-    reference_object: Optional["ReferenceObject"] = Field(
+    reference_object: Optional[ReferenceObject] = Field(
         None,
         description=(
             "Optional reference frame for coordinate transformation. "

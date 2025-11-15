@@ -10,7 +10,7 @@ from typing import Optional
 
 from pydantic import Field, root_validator
 
-from core.enums import (
+from common.enums import (
     AngleRange,
     ArucoDict,
     ArucoReferenceMode,

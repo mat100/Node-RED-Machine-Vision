@@ -13,7 +13,8 @@ class TestArucoAPI:
         """Capture a test image with ArUco markers"""
         response = client.post("/api/camera/capture", json={"camera_id": "test"})
         assert response.status_code == 200
-        return response.json()["image_id"]
+        data = response.json()
+        return data["objects"][0]["properties"]["image_id"]
 
     def test_aruco_detect_basic(self, client, captured_image_id):
         """Test basic ArUco marker detection"""
@@ -88,7 +89,8 @@ class TestArucoAPI:
         """Test ArUco detection on image without markers"""
         # Create a blank image without markers
         response = client.post("/api/camera/capture", json={"camera_id": "test"})
-        image_id = response.json()["image_id"]
+        data = response.json()
+        image_id = data["objects"][0]["properties"]["image_id"]
 
         # Try to detect markers in a small ROI with no markers
         request_data = {
@@ -114,7 +116,8 @@ class TestRotationAPI:
         """Capture a test image"""
         response = client.post("/api/camera/capture", json={"camera_id": "test"})
         assert response.status_code == 200
-        return response.json()["image_id"]
+        data = response.json()
+        return data["objects"][0]["properties"]["image_id"]
 
     @pytest.fixture
     def edge_contour(self, client, captured_image_id):
@@ -281,7 +284,8 @@ class TestArucoRotationIntegration:
         """Capture a test image"""
         response = client.post("/api/camera/capture", json={"camera_id": "test"})
         assert response.status_code == 200
-        return response.json()["image_id"]
+        data = response.json()
+        return data["objects"][0]["properties"]["image_id"]
 
     def test_aruco_then_edge_then_rotation(self, client, captured_image_id):
         """Test complete workflow: ArUco → Edge → Rotation"""

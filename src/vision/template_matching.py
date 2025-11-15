@@ -10,7 +10,9 @@ from typing import Any, Dict
 import cv2
 import numpy as np
 
-from schemas import ROI, Point, VisionObject, VisionObjectType
+from common.base import ROI, Point
+from common.enums import VisionObjectType
+from schemas import VisionObject
 
 
 class TemplateDetector:

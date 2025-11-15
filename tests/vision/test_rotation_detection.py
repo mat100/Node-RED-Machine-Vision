@@ -5,7 +5,7 @@ Tests for rotation detection module.
 import numpy as np
 import pytest
 
-from core.enums import AngleRange, RotationMethod
+from common.enums import AngleRange, RotationMethod
 from vision.rotation_detection import RotationDetector
 
 

@@ -15,15 +15,17 @@ class TestImageRouterAPI:
         """Capture a test image and return its ID"""
         response = client.post("/api/camera/capture", json={"camera_id": "test"})
         assert response.status_code == 200
-        return response.json()["image_id"]
+        data = response.json()
+        return data["objects"][0]["properties"]["image_id"]
 
     @pytest.fixture
     def large_image_id(self, client):
         """Create a large test image (>320px wide) for thumbnail scaling tests"""
-        # Test camera generates 640x480 images by default
+        # Test camera generates 1920x1080 images by default
         response = client.post("/api/camera/capture", json={"camera_id": "test"})
         assert response.status_code == 200
-        return response.json()["image_id"]
+        data = response.json()
+        return data["objects"][0]["properties"]["image_id"]
 
     def test_extract_roi_basic(self, client, captured_image_id):
         """Test basic ROI extraction"""
@@ -36,21 +38,26 @@ class TestImageRouterAPI:
         assert response.status_code == 200
         data = response.json()
 
-        # Check response structure
-        assert "success" in data
-        assert data["success"] is True
-        assert "thumbnail" in data
-        assert "bounding_box" in data
+        # VisionResponse format
+        assert "objects" in data
+        assert len(data["objects"]) == 1
+        assert "thumbnail_base64" in data
+        assert "processing_time_ms" in data
 
         # Check thumbnail is valid base64
-        assert isinstance(data["thumbnail"], str)
-        assert len(data["thumbnail"]) > 0
-        # Should be decodable
-        decoded = base64.b64decode(data["thumbnail"])
+        assert isinstance(data["thumbnail_base64"], str)
+        assert len(data["thumbnail_base64"]) > 0
+        # Should be decodable (remove data:image/jpeg;base64, prefix if present)
+        thumb = data["thumbnail_base64"]
+        if thumb.startswith("data:"):
+            thumb = thumb.split(",")[1]
+        decoded = base64.b64decode(thumb)
         assert len(decoded) > 0
 
-        # Check bounding box matches request
-        bbox = data["bounding_box"]
+        # Check bounding box in vision object
+        obj = data["objects"][0]
+        assert obj["object_type"] == "roi_extract"
+        bbox = obj["bounding_box"]
         assert bbox["x"] == 50
         assert bbox["y"] == 50
         assert bbox["width"] == 100
@@ -67,9 +74,10 @@ class TestImageRouterAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["success"] is True
+        # VisionResponse format
+        assert "objects" in data
 
-        bbox = data["bounding_box"]
+        bbox = data["objects"][0]["bounding_box"]
         assert bbox["x"] == 0
         assert bbox["y"] == 0
         assert bbox["width"] == 640
@@ -87,10 +95,13 @@ class TestImageRouterAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["success"] is True
+
+        # VisionResponse format
+        assert "objects" in data
+        assert len(data["objects"]) == 1
 
         # Bounding box should be clipped - width/height should be less than requested
-        bbox = data["bounding_box"]
+        bbox = data["objects"][0]["bounding_box"]
         assert bbox["x"] >= 500  # May be clipped if image is smaller
         assert bbox["y"] >= 400  # May be clipped if image is smaller
         # Width/height should definitely be clipped from 5000
@@ -126,13 +137,16 @@ class TestImageRouterAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["success"] is True
+
+        # VisionResponse format
+        assert "objects" in data
+        assert "thumbnail_base64" in data
 
         # Thumbnail should be generated (can't easily check exact dimensions without decoding)
-        assert len(data["thumbnail"]) > 0
+        assert len(data["thumbnail_base64"]) > 0
 
         # Bounding box should still reflect original dimensions
-        bbox = data["bounding_box"]
+        bbox = data["objects"][0]["bounding_box"]
         assert bbox["width"] == 400
         assert bbox["height"] == 300
 
@@ -147,13 +161,16 @@ class TestImageRouterAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["success"] is True
+
+        # VisionResponse format
+        assert "objects" in data
+        assert "thumbnail_base64" in data
 
         # Thumbnail should be generated
-        assert len(data["thumbnail"]) > 0
+        assert len(data["thumbnail_base64"]) > 0
 
         # Bounding box should match request
-        bbox = data["bounding_box"]
+        bbox = data["objects"][0]["bounding_box"]
         assert bbox["width"] == 150
         assert bbox["height"] == 100
 
@@ -166,7 +183,7 @@ class TestImageRouterAPI:
         }
         response = client.post("/api/image/extract-roi", json=request_data)
         assert response.status_code == 200
-        assert response.json()["success"] is True
+        assert "objects" in response.json()
 
         # Bottom-right corner (640x480 image)
         request_data = {
@@ -175,7 +192,7 @@ class TestImageRouterAPI:
         }
         response = client.post("/api/image/extract-roi", json=request_data)
         assert response.status_code == 200
-        assert response.json()["success"] is True
+        assert "objects" in response.json()
 
     def test_extract_roi_invalid_image_id(self, client):
         """Test ROI extraction with non-existent image"""
@@ -249,12 +266,14 @@ class TestImageRouterAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["success"] is True
+
+        # VisionResponse format
+        assert "objects" in data
 
         # Should generate thumbnail even for 1x1 image
-        assert len(data["thumbnail"]) > 0
+        assert len(data["thumbnail_base64"]) > 0
 
-        bbox = data["bounding_box"]
+        bbox = data["objects"][0]["bounding_box"]
         assert bbox["width"] == 1
         assert bbox["height"] == 1
 
@@ -269,18 +288,22 @@ class TestImageRouterAPI:
         assert response.status_code == 200
         data = response.json()
 
-        # Check all required fields present
-        assert "success" in data
-        assert "thumbnail" in data
-        assert "bounding_box" in data
+        # Check VisionResponse structure
+        assert "objects" in data
+        assert "thumbnail_base64" in data
+        assert "processing_time_ms" in data
 
         # Check field types
-        assert isinstance(data["success"], bool)
-        assert isinstance(data["thumbnail"], str)
-        assert isinstance(data["bounding_box"], dict)
+        assert isinstance(data["objects"], list)
+        assert isinstance(data["thumbnail_base64"], str)
+        assert isinstance(data["processing_time_ms"], int)
 
-        # Check bounding_box structure
-        bbox = data["bounding_box"]
+        # Check vision object structure
+        assert len(data["objects"]) == 1
+        obj = data["objects"][0]
+        assert "object_type" in obj
+        assert "bounding_box" in obj
+        bbox = obj["bounding_box"]
         assert "x" in bbox
         assert "y" in bbox
         assert "width" in bbox
@@ -302,7 +325,11 @@ class TestImageRouterAPI:
         data = response.json()
 
         # Decode base64 and check JPEG signature
-        decoded_bytes = base64.b64decode(data["thumbnail"])
+        thumb = data["thumbnail_base64"]
+        # Remove data URI prefix if present
+        if thumb.startswith("data:"):
+            thumb = thumb.split(",")[1]
+        decoded_bytes = base64.b64decode(thumb)
 
         # JPEG files start with FF D8 (SOI marker)
         assert decoded_bytes[:2] == b"\xff\xd8"
