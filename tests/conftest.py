@@ -8,12 +8,9 @@ import cv2
 import numpy as np
 import pytest
 
-from core.camera_manager import CameraManager
-from core.image_manager import ImageManager
-from core.template_manager import TemplateManager
-from services.camera_service import CameraService
-from services.image_service import ImageService
-from services.vision_service import VisionService
+from managers.camera_manager import CameraManager
+from managers.image_manager import ImageManager
+from managers.template_manager import TemplateManager
 
 
 @pytest.fixture
@@ -72,27 +69,6 @@ def template_manager(tmp_path):
     manager = TemplateManager(str(template_dir))
     yield manager
     # Cleanup happens automatically with tmp_path
-
-
-@pytest.fixture
-def camera_service(camera_manager, image_manager):
-    """Create CameraService instance for testing"""
-    return CameraService(camera_manager=camera_manager, image_manager=image_manager)
-
-
-@pytest.fixture
-def image_service(image_manager):
-    """Create ImageService instance for testing"""
-    return ImageService(image_manager=image_manager)
-
-
-@pytest.fixture
-def vision_service(image_manager, template_manager):
-    """Create VisionService instance for testing"""
-    return VisionService(
-        image_manager=image_manager,
-        template_manager=template_manager,
-    )
 
 
 @pytest.fixture

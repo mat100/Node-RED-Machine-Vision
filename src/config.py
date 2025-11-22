@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseSettings, Field, root_validator, validator
 
-from common.constants import (
+from domain_types import (
     APIConstants,
     CameraConstants,
     ImageConstants,

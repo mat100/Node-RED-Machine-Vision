@@ -25,12 +25,6 @@ class TestCameraAPI:
         assert data["managers"]["camera_manager"] is True
         assert data["managers"]["template_manager"] is True
 
-        # Check services (singleton refactor)
-        assert "services" in data
-        assert data["services"]["vision_service"] is True
-        assert data["services"]["camera_service"] is True
-        assert data["services"]["image_service"] is True
-
     def test_list_cameras(self, client):
         """Test listing available cameras"""
         response = client.post("/api/camera/list")

@@ -22,23 +22,17 @@ os.environ["OPENCV_LOG_LEVEL"] = "ERROR"  # Only show errors, not warnings
 # Add src directory to path
 sys.path.append(str(Path(__file__).parent / "src"))
 
-from api.exceptions import register_exception_handlers  # noqa: E402
-
-# Import routers  # noqa: E402
-from api.routers import camera, image, system, template, vision  # noqa: E402
-
 # Import configuration and exception handlers  # noqa: E402
 from config import get_settings  # noqa: E402
-from core.camera_manager import CameraManager  # noqa: E402
+from exceptions import register_exception_handlers  # noqa: E402
+from managers.camera_manager import CameraManager  # noqa: E402
 
 # Import core components  # noqa: E402
-from core.image_manager import ImageManager  # noqa: E402
-from core.template_manager import TemplateManager  # noqa: E402
+from managers.image_manager import ImageManager  # noqa: E402
+from managers.template_manager import TemplateManager  # noqa: E402
 
-# Import services  # noqa: E402
-from services.camera_service import CameraService  # noqa: E402
-from services.image_service import ImageService  # noqa: E402
-from services.vision_service import VisionService  # noqa: E402
+# Import routers  # noqa: E402
+from routers import camera, image, system, template, vision  # noqa: E402
 
 # Get configuration
 settings = get_settings()
@@ -56,13 +50,10 @@ try:
 except Exception:
     pass  # watchfiles not installed (production mode)
 
-# Initialize managers and services (set to None, initialized in lifespan)
+# Initialize managers (set to None, initialized in lifespan)
 image_manager = None
 camera_manager = None
 template_manager = None
-vision_service = None
-camera_service = None
-image_service = None
 shutdown_event = asyncio.Event()
 
 
@@ -70,7 +61,6 @@ shutdown_event = asyncio.Event()
 async def lifespan(app: FastAPI):
     """Manage application lifecycle"""
     global image_manager, camera_manager, template_manager
-    global vision_service, camera_service, image_service
 
     # Startup
     logger.info("Starting Machine Vision Flow server...")
@@ -92,28 +82,10 @@ async def lifespan(app: FastAPI):
 
     logger.info("All managers initialized successfully")
 
-    # Initialize services as singletons (performance optimization)
-    vision_service = VisionService(
-        image_manager=image_manager,
-        template_manager=template_manager,
-    )
-
-    camera_service = CameraService(
-        camera_manager=camera_manager,
-        image_manager=image_manager,
-    )
-
-    image_service = ImageService(image_manager=image_manager)
-
-    logger.info("All services initialized successfully")
-
-    # Store managers and services in app state for access by routers
+    # Store managers in app state for access by routers
     app.state.image_manager = image_manager
     app.state.camera_manager = camera_manager
     app.state.template_manager = template_manager
-    app.state.vision_service = vision_service
-    app.state.camera_service = camera_service
-    app.state.image_service = image_service
     app.state.config = settings.to_dict()
     app.state.debug = settings.system.debug
 
@@ -200,14 +172,6 @@ async def health_check():
             and app.state.camera_manager is not None,
             "template_manager": hasattr(app.state, "template_manager")
             and app.state.template_manager is not None,
-        },
-        "services": {
-            "vision_service": hasattr(app.state, "vision_service")
-            and app.state.vision_service is not None,
-            "camera_service": hasattr(app.state, "camera_service")
-            and app.state.camera_service is not None,
-            "image_service": hasattr(app.state, "image_service")
-            and app.state.image_service is not None,
         },
     }
 
