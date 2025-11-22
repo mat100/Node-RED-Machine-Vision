@@ -52,6 +52,10 @@ class TestArucoReferenceAPI:
         assert len(ref_obj["homography_matrix"]) == 3  # 3x3 matrix
         assert len(ref_obj["homography_matrix"][0]) == 3
 
+        # Check thumbnail is present
+        assert "thumbnail" in ref_obj
+        assert ref_obj["thumbnail"].startswith("data:image/jpeg;base64,")
+
         # Check metadata
         assert "metadata" in ref_obj
         metadata = ref_obj["metadata"]
@@ -161,6 +165,10 @@ class TestArucoReferenceAPI:
             assert ref_obj["type"] == "plane"
             assert ref_obj["units"] == "mm"
             assert "homography_matrix" in ref_obj
+
+            # Check thumbnail is present
+            assert "thumbnail" in ref_obj
+            assert ref_obj["thumbnail"].startswith("data:image/jpeg;base64,")
 
             # Check metadata
             metadata = ref_obj["metadata"]
@@ -390,6 +398,10 @@ class TestArucoReferenceIntegration:
         assert "units" in reference_object
         assert "homography_matrix" in reference_object
         assert "metadata" in reference_object
+        assert "thumbnail" in reference_object
+
+        # Thumbnail should be a valid base64 data URI
+        assert reference_object["thumbnail"].startswith("data:image/jpeg;base64,")
 
         # Homography should be 3x3
         H = reference_object["homography_matrix"]

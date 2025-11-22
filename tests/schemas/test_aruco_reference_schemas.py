@@ -340,6 +340,7 @@ class TestArucoReferenceResponse:
             units="mm",
             homography_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
             metadata={"marker_id": 0, "scale_mm_per_pixel": 0.5},
+            thumbnail="data:image/jpeg;base64,test",
         )
 
         marker = VisionObject(
@@ -403,11 +404,13 @@ class TestReferenceObject:
                 "scale_mm_per_pixel": 0.5,
                 "origin": "marker_center",
             },
+            thumbnail="data:image/jpeg;base64,test",
         )
 
         assert ref_obj.type == "single_marker"
         assert ref_obj.units == "mm"
         assert ref_obj.metadata["marker_id"] == 0
+        assert ref_obj.thumbnail is not None
 
     def test_reference_object_plane(self):
         """Test ReferenceObject for plane"""
@@ -425,10 +428,12 @@ class TestReferenceObject:
                 "width_mm": 200.0,
                 "height_mm": 150.0,
             },
+            thumbnail="data:image/jpeg;base64,test",
         )
 
         assert ref_obj.type == "plane"
         assert ref_obj.metadata["width_mm"] == 200.0
+        assert ref_obj.thumbnail is not None
 
     def test_reference_object_homography_structure(self):
         """Test that homography matrix has correct structure"""
@@ -437,6 +442,7 @@ class TestReferenceObject:
             units="mm",
             homography_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
             metadata={},
+            thumbnail="data:image/jpeg;base64,test",
         )
 
         H = ref_obj.homography_matrix

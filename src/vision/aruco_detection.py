@@ -22,9 +22,15 @@ from vision.base_detector import BaseDetector
 class ArucoDetector(BaseDetector):
     """ArUco marker detector."""
 
-    def __init__(self):
-        """Initialize ArUco detector."""
+    def __init__(self, image_manager=None):
+        """
+        Initialize ArUco detector.
+
+        Args:
+            image_manager: Optional ImageManager instance for thumbnail generation
+        """
         super().__init__()
+        self.image_manager = image_manager
 
         # Dictionary mapping for OpenCV ArUco
         self.aruco_dicts = {
@@ -100,9 +106,13 @@ class ArucoDetector(BaseDetector):
         # Create reference_object based on mode
         reference_object = None
         if mode == ArucoDetectionMode.SINGLE.value or mode == "single":
-            reference_object = self._create_single_reference(objects, single_config, image.shape)
+            reference_object = self._create_single_reference(
+                objects, single_config, image.shape, image
+            )
         elif mode == ArucoDetectionMode.PLANE.value or mode == "plane":
-            reference_object = self._create_plane_reference(objects, plane_config, image.shape)
+            reference_object = self._create_plane_reference(
+                objects, plane_config, image.shape, image
+            )
 
         # Create visualization using overlay rendering function
         from core.image.overlay import render_aruco_markers
@@ -196,6 +206,7 @@ class ArucoDetector(BaseDetector):
         objects: List[VisionObject],
         config: Optional[Dict[str, Any]],
         image_shape: tuple,
+        image: np.ndarray,
     ) -> Optional[ReferenceObject]:
         """
         Create reference object from single marker.
@@ -205,6 +216,7 @@ class ArucoDetector(BaseDetector):
             config: Single marker configuration (marker_id, marker_size_mm, origin,
                 rotation_reference)
             image_shape: Image shape (height, width, channels)
+            image: Original image for thumbnail generation
 
         Returns:
             ReferenceObject or None if marker not found
@@ -270,21 +282,30 @@ class ArucoDetector(BaseDetector):
 
         homography = create_affine_transform(origin_point, rotation_offset, scale)
 
+        # Create metadata
+        metadata = {
+            "marker_id": marker_id,
+            "marker_size_mm": marker_size_mm,
+            "marker_size_px": marker_size_px,
+            "scale_mm_per_pixel": scale,
+            "origin": origin,
+            "origin_point_px": origin_point,
+            "rotation_reference": rotation_reference,
+            "reference_rotation_deg": rotation_offset,
+        }
+
+        # Generate thumbnail visualization
+        thumbnail_base64 = self._generate_reference_thumbnail(
+            image, "single_marker", "mm", homography.tolist(), metadata, objects
+        )
+
         # Create reference object
         reference_obj = ReferenceObject(
             type="single_marker",
             units="mm",
             homography_matrix=homography.tolist(),
-            metadata={
-                "marker_id": marker_id,
-                "marker_size_mm": marker_size_mm,
-                "marker_size_px": marker_size_px,
-                "scale_mm_per_pixel": scale,
-                "origin": origin,
-                "origin_point_px": origin_point,
-                "rotation_reference": rotation_reference,
-                "reference_rotation_deg": rotation_offset,
-            },
+            metadata=metadata,
+            thumbnail=thumbnail_base64,
         )
 
         return reference_obj
@@ -294,6 +315,7 @@ class ArucoDetector(BaseDetector):
         objects: List[VisionObject],
         config: Optional[Dict[str, Any]],
         image_shape: tuple,
+        image: np.ndarray,
     ) -> Optional[ReferenceObject]:
         """
         Create reference object from 4-marker plane.
@@ -302,6 +324,7 @@ class ArucoDetector(BaseDetector):
             objects: List of detected markers
             config: Plane configuration (marker_ids, width_mm, height_mm, origin, directions)
             image_shape: Image shape (height, width, channels)
+            image: Original image for thumbnail generation
 
         Returns:
             ReferenceObject or None if not all markers found
@@ -361,26 +384,35 @@ class ArucoDetector(BaseDetector):
 
         homography = compute_homography_from_points(src_points, dst_points)
 
+        # Create metadata
+        metadata = {
+            "marker_ids": marker_ids,
+            "markers_found": {
+                corner: {
+                    "marker_id": marker_ids[corner],
+                    "center_px": [marker_map[corner].center.x, marker_map[corner].center.y],
+                }
+                for corner in required_corners
+            },
+            "width_mm": width_mm,
+            "height_mm": height_mm,
+            "origin": origin,
+            "x_direction": x_direction,
+            "y_direction": y_direction,
+        }
+
+        # Generate thumbnail visualization
+        thumbnail_base64 = self._generate_reference_thumbnail(
+            image, "plane", "mm", homography.tolist(), metadata, objects
+        )
+
         # Create reference object
         reference_obj = ReferenceObject(
             type="plane",
             units="mm",
             homography_matrix=homography.tolist(),
-            metadata={
-                "marker_ids": marker_ids,
-                "markers_found": {
-                    corner: {
-                        "marker_id": marker_ids[corner],
-                        "center_px": [marker_map[corner].center.x, marker_map[corner].center.y],
-                    }
-                    for corner in required_corners
-                },
-                "width_mm": width_mm,
-                "height_mm": height_mm,
-                "origin": origin,
-                "x_direction": x_direction,
-                "y_direction": y_direction,
-            },
+            metadata=metadata,
+            thumbnail=thumbnail_base64,
         )
 
         return reference_obj
@@ -449,3 +481,48 @@ class ArucoDetector(BaseDetector):
             ],
             dtype=np.float32,
         )
+
+    def _generate_reference_thumbnail(
+        self,
+        image: np.ndarray,
+        ref_type: str,
+        units: str,
+        homography_matrix: List[List[float]],
+        metadata: Dict[str, Any],
+        markers: List[VisionObject],
+    ) -> str:
+        """
+        Generate base64-encoded thumbnail visualization of reference plane.
+
+        Args:
+            image: Original image
+            ref_type: Reference type (single_marker or plane)
+            units: Units (mm, cm, m, pixels)
+            homography_matrix: Homography transformation matrix
+            metadata: Reference metadata
+            markers: Detected ArUco markers
+
+        Returns:
+            Base64-encoded data URI string
+        """
+        from core.image.overlay import render_reference_plane
+
+        # Create temporary ReferenceObject for overlay rendering
+        # Use lazy import to avoid circular dependency at runtime
+        from schemas.reference import ReferenceObject
+
+        temp_ref_obj = ReferenceObject(
+            type=ref_type,
+            units=units,
+            homography_matrix=homography_matrix,
+            metadata=metadata,
+            thumbnail="",  # Placeholder, will be replaced
+        )
+
+        # Render reference plane visualization
+        visualization = render_reference_plane(image, temp_ref_obj, markers)
+
+        # Create thumbnail using ImageManager (respects config settings)
+        _, thumbnail_base64 = self.image_manager.create_thumbnail(visualization)
+
+        return thumbnail_base64

@@ -29,6 +29,7 @@ class TestApplyReferenceTransform:
             units="mm",
             homography_matrix=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
             metadata={},
+            thumbnail="data:image/jpeg;base64,test",
         )
 
         # Apply transformation
@@ -58,6 +59,7 @@ class TestApplyReferenceTransform:
             units="mm",
             homography_matrix=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
             metadata={},
+            thumbnail="data:image/jpeg;base64,test",
         )
 
         # Apply transformation
@@ -84,6 +86,7 @@ class TestApplyReferenceTransform:
             units="mm",
             homography_matrix=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
             metadata={},
+            thumbnail="data:image/jpeg;base64,test",
         )
 
         # Apply transformation
@@ -109,6 +112,7 @@ class TestApplyReferenceTransform:
             units="mm",
             homography_matrix=[[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 1.0]],
             metadata={},
+            thumbnail="data:image/jpeg;base64,test",
         )
 
         # Apply transformation
@@ -137,6 +141,7 @@ class TestApplyReferenceTransform:
             units="mm",
             homography_matrix=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
             metadata={},
+            thumbnail="data:image/jpeg;base64,test",
         )
 
         # Apply transformation

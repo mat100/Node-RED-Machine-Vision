@@ -157,6 +157,14 @@ class ReferenceObject(BaseModel):
         description="Type-specific metadata (marker IDs, dimensions, etc.)",
     )
 
+    thumbnail: str = Field(
+        description=(
+            "Base64-encoded JPEG visualization of reference plane showing: "
+            "detected markers with IDs, coordinate axes (X/Y), grid in physical units, "
+            "and origin point [0,0]. Format: data:image/jpeg;base64,..."
+        ),
+    )
+
     @validator("homography_matrix")
     def validate_homography(cls, v):
         if len(v) != 3:

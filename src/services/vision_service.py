@@ -58,7 +58,7 @@ class VisionService:
         self.image_manager = image_manager
         self.template_manager = template_manager
         self.color_detector = ColorDetector()
-        self.aruco_detector = ArucoDetector()
+        self.aruco_detector = ArucoDetector(image_manager=image_manager)
         self.rotation_detector = RotationDetector()
 
     @staticmethod
