@@ -4,14 +4,14 @@ Image API Router - Image processing operations
 
 import logging
 import os
+import time
 
 import cv2
 from fastapi import APIRouter, Depends
 
 from dependencies import get_image_manager
-from domain_types import ROI, ImageConstants, Point
+from domain_types import ROI, Point
 from exceptions import ImageNotFoundException, safe_endpoint
-from image.converters import encode_image_to_base64
 from image.roi import extract_roi
 from managers.image_manager import ImageManager
 from models import ImageImportRequest, ROIExtractRequest, VisionObject, VisionResponse
@@ -40,43 +40,27 @@ async def extract_roi_endpoint(
     Returns:
         VisionResponse with single VisionObject representing the extracted ROI
     """
-    import time
-
     start_time = time.time()
 
     # Get image from manager
     original_image = image_manager.get(request.image_id)
     if original_image is None:
+        logger.error(f"Image {request.image_id} not found in cache")
         raise ImageNotFoundException(request.image_id)
 
     # Extract ROI from source image (clipped to image bounds)
     roi_image = extract_roi(original_image, request.roi, safe_mode=True)
     if roi_image is None:
-        raise ValueError("Invalid ROI parameters")
+        raise ValueError(
+            f"Invalid ROI parameters: {request.roi.dict()} for image {request.image_id}"
+        )
 
-    # Create thumbnail directly from the cropped image
-    # Resize to thumbnail size (max width 320px)
-    height, width = roi_image.shape[:2]
-    max_width = ImageConstants.DEFAULT_THUMBNAIL_WIDTH
-    if width > max_width:
-        scale = max_width / width
-        new_width = max_width
-        new_height = int(height * scale)
-        thumbnail_image = cv2.resize(roi_image, (new_width, new_height))
-    else:
-        thumbnail_image = roi_image
-
-    # Encode to base64 using utility function
-    thumbnail = encode_image_to_base64(thumbnail_image, ".jpg")
+    # Generate thumbnail using ImageManager
+    _, thumbnail = image_manager.create_thumbnail(roi_image, width=None, image_id=None)
 
     # Get actual clipped bounding box
     img_height, img_width = original_image.shape[:2]
-
-    clipped_bbox = request.roi.copy()
-    clipped_bbox.x = max(0, min(clipped_bbox.x, img_width - 1))
-    clipped_bbox.y = max(0, min(clipped_bbox.y, img_height - 1))
-    clipped_bbox.width = min(clipped_bbox.width, img_width - clipped_bbox.x)
-    clipped_bbox.height = min(clipped_bbox.height, img_height - clipped_bbox.y)
+    clipped_bbox = request.roi.clip(img_width, img_height)
 
     logger.info(
         f"Extracted ROI thumbnail from {request.image_id}: "
@@ -142,17 +126,17 @@ async def import_image(
         HTTPException 404: If file not found
         HTTPException 400: If file cannot be loaded as image
     """
-    import time
-
     start_time = time.time()
 
     # Validate file exists
     if not os.path.exists(request.file_path):
+        logger.error(f"Image file not found: {request.file_path}")
         raise FileNotFoundError(f"Image file not found: {request.file_path}")
 
     # Load image with OpenCV
     image = cv2.imread(request.file_path, cv2.IMREAD_COLOR)
     if image is None:
+        logger.error(f"Failed to load image from: {request.file_path}")
         raise ValueError(f"Failed to load image from: {request.file_path}")
 
     # Extract metadata
