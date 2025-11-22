@@ -109,6 +109,14 @@ class AngleRange(str, Enum):
     RANGE_0_180 = "0_180"  # 0 to 180 degrees (symmetric objects)
 
 
+class AsymmetryOrientation(str, Enum):
+    """Orientation direction for asymmetric objects (based on thickness)."""
+
+    DISABLED = "disabled"  # No asymmetry-based orientation
+    THICK_TO_THIN = "thick_to_thin"  # Orient angle from thick part to thin part
+    THIN_TO_THICK = "thin_to_thick"  # Orient angle from thin part to thick part
+
+
 # Vision object type enums
 class VisionObjectType(str, Enum):
     """Types of vision objects."""

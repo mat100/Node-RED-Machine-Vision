@@ -14,6 +14,7 @@ from common.enums import (
     AngleRange,
     ArucoDict,
     ArucoReferenceMode,
+    AsymmetryOrientation,
     ColorMethod,
     RotationMethod,
     TemplateMethod,
@@ -255,6 +256,15 @@ class RotationDetectionParams(BaseDetectionParams):
     angle_range: AngleRange = Field(
         default=AngleRange.RANGE_0_360,
         description="Output angle range format (0_360, -180_180, or 0_180)",
+    )
+    asymmetry_orientation: AsymmetryOrientation = Field(
+        default=AsymmetryOrientation.DISABLED,
+        description=(
+            "Orient angle based on object asymmetry (thickness). "
+            "thick_to_thin: 0° points from thick to thin part. "
+            "thin_to_thick: 0° points from thin to thick part. "
+            "disabled: no asymmetry-based orientation (default)"
+        ),
     )
 
 

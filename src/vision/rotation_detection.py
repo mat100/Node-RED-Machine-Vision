@@ -10,7 +10,7 @@ import numpy as np
 
 from common.base import ROI, Point
 from common.constants import VisionConstants
-from common.enums import AngleRange, RotationMethod, VisionObjectType
+from common.enums import AngleRange, AsymmetryOrientation, RotationMethod, VisionObjectType
 from schemas import VisionObject
 from vision.base_detector import BaseDetector
 
@@ -28,6 +28,7 @@ class RotationDetector(BaseDetector):
         contour: List,
         method: RotationMethod = RotationMethod.MIN_AREA_RECT,
         angle_range: AngleRange = AngleRange.RANGE_0_360,
+        asymmetry_orientation: AsymmetryOrientation = None,
         roi: Optional[Dict[str, int]] = None,
     ) -> Dict[str, Any]:
         """
@@ -38,6 +39,7 @@ class RotationDetector(BaseDetector):
             contour: Contour points [[x1,y1], [x2,y2], ...]
             method: Rotation calculation method
             angle_range: Output angle range format
+            asymmetry_orientation: Optional asymmetry-based orientation
             roi: Optional ROI for context (for visualization only)
 
         Returns:
@@ -81,11 +83,30 @@ class RotationDetector(BaseDetector):
         # Convert angle to requested range
         angle = self._convert_angle_range(angle, angle_range)
 
+        # Apply asymmetry-based orientation if requested
+        thickness_ratio = None
+
+        if asymmetry_orientation and asymmetry_orientation != AsymmetryOrientation.DISABLED:
+            angle, thickness_ratio = self._orient_by_asymmetry(
+                contour_array, angle, center, asymmetry_orientation
+            )
+
         # Calculate contour properties using utility function
         props = calculate_contour_properties(contour_array)
         x, y, w, h = props["bounding_box"]
         area = props["area"]
         perimeter = props["perimeter"]
+
+        # Build properties dictionary
+        properties_dict = {
+            "method": method.value,
+            "angle_range": angle_range.value,
+            "absolute_angle": angle,  # Same as rotation for now (reference added in Node-RED)
+        }
+
+        # Add thickness_ratio if asymmetry orientation was applied
+        if thickness_ratio is not None:
+            properties_dict["thickness_ratio"] = round(thickness_ratio, 2)
 
         # Create VisionObject
         obj = VisionObject(
@@ -97,11 +118,7 @@ class RotationDetector(BaseDetector):
             area=area,
             perimeter=perimeter,
             rotation=angle,
-            properties={
-                "method": method.value,
-                "angle_range": angle_range.value,
-                "absolute_angle": angle,  # Same as rotation for now (reference added in Node-RED)
-            },
+            properties=properties_dict,
             contour=contour,  # Preserve original contour
         )
 
@@ -259,3 +276,99 @@ class RotationDetector(BaseDetector):
         # Convert to radians, normalize, and return
         angle_rad = np.radians(angle)
         return normalize_angle(angle_rad, angle_format=format_map[range_type])
+
+    def _orient_by_asymmetry(
+        self,
+        contour: np.ndarray,
+        angle: float,
+        center: Point,
+        orientation: AsymmetryOrientation,
+    ) -> tuple:
+        """
+        Orient angle based on object asymmetry (thickness difference).
+
+        Divides contour into two halves along the principal axis and measures
+        the thickness of each half. Orients the angle to point from thick to thin
+        or vice versa based on the orientation parameter.
+
+        Args:
+            contour: Contour points (Nx1x2 format)
+            angle: Current rotation angle in degrees (0-360)
+            center: Center point of the object
+            orientation: Desired orientation (thick_to_thin or thin_to_thick)
+
+        Returns:
+            (oriented_angle, thickness_ratio)
+        """
+        # Reshape contour to Nx2 for easier processing
+        points = contour.reshape(-1, 2).astype(np.float32)
+
+        # Convert angle to radians for calculation
+        angle_rad = np.radians(angle)
+
+        # Create perpendicular vector (for splitting contour)
+        perp_vec = np.array([-np.sin(angle_rad), np.cos(angle_rad)])
+
+        # Center the points
+        centered_points = points - np.array([center.x, center.y])
+
+        # Project each point onto the perpendicular axis to determine which side it's on
+        perp_projections = np.dot(centered_points, perp_vec)
+
+        # Split points into two halves based on sign of perpendicular projection
+        side_a_mask = perp_projections >= 0
+        side_b_mask = perp_projections < 0
+
+        side_a_points = centered_points[side_a_mask]
+        side_b_points = centered_points[side_b_mask]
+
+        # Calculate thickness for each side (average perpendicular distance from axis)
+        if len(side_a_points) > 0:
+            side_a_perp_dist = np.abs(np.dot(side_a_points, perp_vec))
+            thickness_a = np.mean(side_a_perp_dist)
+        else:
+            thickness_a = 0.0
+
+        if len(side_b_points) > 0:
+            side_b_perp_dist = np.abs(np.dot(side_b_points, perp_vec))
+            thickness_b = np.mean(side_b_perp_dist)
+        else:
+            thickness_b = 0.0
+
+        # Determine which side is thicker
+        if thickness_a > thickness_b:
+            thick_side = "a"
+            thickness_ratio = thickness_a / thickness_b if thickness_b > 0 else thickness_a
+        else:
+            thick_side = "b"
+            thickness_ratio = thickness_b / thickness_a if thickness_a > 0 else thickness_b
+
+        # Determine if we need to flip the angle by 180 degrees
+        need_flip = False
+
+        if orientation == AsymmetryOrientation.THICK_TO_THIN:
+            # We want 0° to point from thick to thin
+            # Current angle points in the direction of axis_vec
+            # Check if axis_vec points toward the thick side
+            if thick_side == "a" and perp_projections[side_a_mask].mean() < 0:
+                # Thick side A is in negative perpendicular direction, flip
+                need_flip = True
+            elif thick_side == "b" and perp_projections[side_b_mask].mean() > 0:
+                # Thick side B is in positive perpendicular direction, flip
+                need_flip = True
+
+        elif orientation == AsymmetryOrientation.THIN_TO_THICK:
+            # We want 0° to point from thin to thick
+            if thick_side == "a" and perp_projections[side_a_mask].mean() > 0:
+                # Thick side A is in positive perpendicular direction, flip
+                need_flip = True
+            elif thick_side == "b" and perp_projections[side_b_mask].mean() < 0:
+                # Thick side B is in negative perpendicular direction, flip
+                need_flip = True
+
+        # Apply flip if needed
+        oriented_angle = angle
+        if need_flip:
+            oriented_angle = (angle + 180.0) % 360.0
+
+        return oriented_angle, thickness_ratio

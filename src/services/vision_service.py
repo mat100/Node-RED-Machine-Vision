@@ -530,11 +530,17 @@ class VisionService:
         # Extract params (all defaults already applied by Pydantic!)
         method_enum = params.method
         range_enum = params.angle_range
+        asymmetry_enum = params.asymmetry_orientation
 
         # Create detector function
         def detect_func(image):
             return self.rotation_detector.detect(
-                image, contour=contour, method=method_enum, angle_range=range_enum, roi=roi
+                image,
+                contour=contour,
+                method=method_enum,
+                angle_range=range_enum,
+                asymmetry_orientation=asymmetry_enum,
+                roi=roi,
             )
 
         # Execute using template method (handles image retrieval, thumbnail, timing)
