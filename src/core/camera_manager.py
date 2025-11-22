@@ -48,6 +48,12 @@ class CameraSettings:
     fps: int = 30
     capture_timeout_ms: int = 5000  # Timeout for capture operations in milliseconds
 
+    def __post_init__(self):
+        """Adjust timeout for IP cameras to account for buffer flushing"""
+        if self.type == CameraType.IP:
+            # IP cameras need longer timeout due to buffer flushing
+            self.capture_timeout_ms = max(self.capture_timeout_ms, 10000)
+
 
 class Camera:
     """Base camera class"""
@@ -76,8 +82,6 @@ class Camera:
                     self.cap = cv2.VideoCapture(self.config.source)
                 elif self.config.type == CameraType.IP:
                     self.cap = cv2.VideoCapture(self.config.source, cv2.CAP_FFMPEG)
-                    # Configure for better H.264 handling
-                    self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimize buffer
                 elif self.config.type == CameraType.FILE:
                     self.cap = cv2.VideoCapture(self.config.source)
                 else:
@@ -153,6 +157,39 @@ class Camera:
         """
         with self.lock:
             if self.cap and self.cap.isOpened():
+                # For IP cameras (RTSP), flush buffer to get fresh frame
+                # RTSP streams buffer many frames - read and discard until we hit live stream
+                if self.config.type == CameraType.IP:
+                    flush_start = time.time()
+                    max_flush_time = 5.0  # Max 5 seconds for flush to avoid timeout
+                    discarded = 0
+                    expected_frame_time = 1.0 / max(self.config.fps, 1)
+
+                    for i in range(50):
+                        # Stop if flush takes too long (prevent timeout)
+                        if (time.time() - flush_start) > max_flush_time:
+                            logger.warning(f"RTSP flush time limit reached ({discarded} frames)")
+                            break
+
+                        frame_start = time.time()
+                        ret, _ = self.cap.read()
+                        frame_time = time.time() - frame_start
+
+                        if not ret:
+                            logger.warning(f"RTSP buffer flush failed at frame {i}")
+                            break
+
+                        discarded += 1
+
+                        # Buffered frames return instantly, live frames wait
+                        # If read took significant time, we've reached live stream
+                        if frame_time > (expected_frame_time * 0.5):
+                            break
+
+                    logger.debug(
+                        f"RTSP: flushed {discarded} frames in {time.time() - flush_start:.1f}s"
+                    )
+
                 return self.cap.read()
         return False, None
 
@@ -205,7 +242,11 @@ class Camera:
 
     def get_preview(self) -> Optional[np.ndarray]:
         """Get preview frame (can be cached)"""
-        # Keep a very short cache based on target FPS to avoid stale frames
+        # For IP cameras (RTSP), always get fresh frame - don't cache
+        if self.config.type == CameraType.IP:
+            return self.capture()
+
+        # For other cameras, keep a very short cache based on target FPS to avoid stale frames
         cache_ttl = 1.0 / max(self.config.fps, 1)
         if self.last_frame is not None and (time.time() - self.last_capture_time) < cache_ttl:
             return self.last_frame
