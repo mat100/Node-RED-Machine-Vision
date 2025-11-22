@@ -209,51 +209,69 @@ See [Node-RED documentation](https://github.com/mat100/node-red-contrib-machine-
                    │ HTTP
         ┌──────────▼──────────┐
         │   REST API Layer    │
-        │   (FastAPI Routes)  │
+        │  (src/routers/)     │
+        │   FastAPI Routes    │
         └──────────┬──────────┘
                    │
         ┌──────────▼──────────┐
-        │   Services Layer    │
-        │ Camera • Vision •   │
-        │  Image • Template   │
+        │   Managers Layer    │
+        │  (src/managers/)    │
+        │ • CameraManager     │
+        │ • ImageManager      │
+        │ • TemplateManager   │
         └──────────┬──────────┘
                    │
         ┌──────────▼──────────┐
-        │ Core Infrastructure │
-        │  Managers • Shared  │
-        │  Memory • Algorithms│
+        │  Algorithms Layer   │
+        │  (src/algorithms/)  │
+        │ • Edge Detection    │
+        │ • Color Detection   │
+        │ • ArUco • Template  │
+        └──────────┬──────────┘
+                   │
+        ┌──────────▼──────────┐
+        │   Types & Models    │
+        │ • domain_types.py   │
+        │ • models.py         │
         └──────────┬──────────┘
                    │
         ┌──────────▼──────────┐
         │ Hardware & Storage  │
         │  Cameras • Files    │
+        │ Shared Memory       │
         └─────────────────────┘
 ```
 
 ### Request Flow
 
 ```
-Node-RED                API Router         Service              ImageManager       Algorithm
-    │                       │                  │                      │                 │
-    │  POST /edge-detect    │                  │                      │                 │
-    ├──────────────────────▶│                  │                      │                 │
-    │                       │  edge_detect()   │                      │                 │
-    │                       ├─────────────────▶│                      │                 │
-    │                       │                  │    get_image()       │                 │
-    │                       │                  ├─────────────────────▶│                 │
-    │                       │                  │  numpy array         │                 │
-    │                       │                  │◀─────────────────────┤                 │
-    │                       │                  │                      │                 │
-    │                       │                  │   detect_edges()     │                 │
-    │                       │                  ├──────────────────────┼────────────────▶│
-    │                       │                  │      results         │                 │
-    │                       │                  │◀─────────────────────┼─────────────────┤
-    │                       │  VisionResponse  │                      │                 │
-    │                       │◀─────────────────┤                      │                 │
-    │      JSON response    │                  │                      │                 │
-    │◀──────────────────────┤                  │                      │                 │
-    │                       │                  │                      │                 │
+Node-RED                API Router              ImageManager       Algorithm
+    │                       │                        │                 │
+    │  POST /edge-detect    │                        │                 │
+    ├──────────────────────▶│                        │                 │
+    │                       │                        │                 │
+    │                       │  get(image_id)         │                 │
+    │                       │  (via DI)              │                 │
+    │                       ├───────────────────────▶│                 │
+    │                       │    numpy array         │                 │
+    │                       │◀───────────────────────┤                 │
+    │                       │                        │                 │
+    │                       │  EdgeDetector.detect() │                 │
+    │                       ├────────────────────────┼────────────────▶│
+    │                       │     VisionObjects      │                 │
+    │                       │◀───────────────────────┼─────────────────┤
+    │                       │                        │                 │
+    │                       │  create_thumbnail()    │                 │
+    │                       ├───────────────────────▶│                 │
+    │                       │    thumbnail base64    │                 │
+    │                       │◀───────────────────────┤                 │
+    │                       │                        │                 │
+    │    VisionResponse     │                        │                 │
+    │◀──────────────────────┤                        │                 │
+    │                       │                        │                 │
 ```
+
+**Note:** Router uses dependency injection (DI) to access ImageManager directly. No intermediate service layer exists.
 
 ## API Overview
 
@@ -371,17 +389,13 @@ See [config/config.yaml](config/config.yaml) for all available options.
 
 ## Documentation
 
-- **[CLAUDE.md](CLAUDE.md)** - Comprehensive architecture guide for developers
+- **[CLAUDE.md](CLAUDE.md)** - Comprehensive development guide
   - Design patterns and principles
   - Code structure and organization
-  - Implementation details
-  - Best practices
-
-- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development workflow and tools
-  - Setting up development environment
+  - Development workflow and tools
   - Testing and debugging
   - Code quality tools (black, flake8, isort)
-  - Git workflow and pre-commit hooks
+  - Implementation details and best practices
 
 - **[packaging/INSTALL.md](packaging/INSTALL.md)** - Production deployment guide
   - DEB package installation
@@ -416,7 +430,7 @@ make check            # Run all quality checks
 make clean            # Remove cache files and temporary data
 ```
 
-For detailed development instructions, see [DEVELOPMENT.md](DEVELOPMENT.md).
+For detailed development instructions, see [CLAUDE.md](CLAUDE.md).
 
 ## Testing
 
@@ -425,7 +439,7 @@ For detailed development instructions, see [DEVELOPMENT.md](DEVELOPMENT.md).
 make test
 
 # Run specific test file
-pytest tests/test_camera_service.py
+pytest tests/managers/test_camera_manager.py
 
 # Run with coverage
 pytest --cov=src --cov-report=html
