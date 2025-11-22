@@ -5,7 +5,7 @@ Unit tests for coordinate transformation utilities
 import pytest
 
 from domain_types import ROI, Point
-from managers.image.transform import apply_reference_transform
+from image.transform import apply_reference_transform
 from models import ReferenceObject, VisionObject
 
 

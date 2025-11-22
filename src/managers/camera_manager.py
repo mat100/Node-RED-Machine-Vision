@@ -143,7 +143,7 @@ class Camera:
 
     def _create_test_frame(self) -> np.ndarray:
         """Create a test frame for TEST camera type"""
-        from managers.image.test_patterns import create_simple_test_image
+        from image.test_patterns import create_simple_test_image
 
         width, height = self.config.resolution
         return create_simple_test_image(
@@ -494,7 +494,7 @@ class CameraManager:
 
     def create_test_image(self, text: str = "Test Image") -> np.ndarray:
         """Create a test image for development with ArUco markers"""
-        from managers.image.test_patterns import create_test_image_with_markers
+        from image.test_patterns import create_test_image_with_markers
 
         return create_test_image_with_markers(
             width=1920,

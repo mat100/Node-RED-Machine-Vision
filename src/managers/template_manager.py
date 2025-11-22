@@ -146,7 +146,7 @@ class TemplateManager:
         Returns:
             Template ID
         """
-        from managers.image.roi import extract_roi
+        from image.roi import extract_roi
 
         # Extract ROI using centralized validation
         template = extract_roi(source_image, roi, safe_mode=False)

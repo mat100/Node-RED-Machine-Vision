@@ -38,7 +38,7 @@ class EdgeDetector(BaseDetector):
         Returns:
             Dictionary with edge detection results
         """
-        from managers.image.converters import ensure_grayscale
+        from image.converters import ensure_grayscale
 
         if params is None:
             params = {}

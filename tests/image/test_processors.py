@@ -9,7 +9,7 @@ import base64
 import cv2
 import numpy as np
 
-from managers.image.processors import create_thumbnail, resize_image
+from image.processors import create_thumbnail, resize_image
 
 
 class TestCreateThumbnail:

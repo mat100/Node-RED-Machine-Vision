@@ -125,7 +125,7 @@ class BaseDetector(ABC):
         Returns:
             Grayscale image
         """
-        from managers.image.converters import ensure_grayscale
+        from image.converters import ensure_grayscale
 
         return ensure_grayscale(image)
 
@@ -139,6 +139,6 @@ class BaseDetector(ABC):
         Returns:
             BGR image
         """
-        from managers.image.converters import ensure_bgr
+        from image.converters import ensure_bgr
 
         return ensure_bgr(image)

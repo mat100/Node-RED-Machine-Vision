@@ -10,8 +10,8 @@ import cv2
 import numpy as np
 import pytest
 
-from managers.image.converters import encode_image_to_base64, ensure_bgr, ensure_grayscale
-from managers.image.geometry import calculate_contour_properties, normalize_angle
+from image.converters import encode_image_to_base64, ensure_bgr, ensure_grayscale
+from image.geometry import calculate_contour_properties, normalize_angle
 
 
 class TestImageFormatConversion:

@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 import pytest
 
-from managers.image.converters import (
+from image.converters import (
     encode_image_to_base64,
     ensure_bgr,
     ensure_grayscale,
