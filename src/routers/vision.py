@@ -14,6 +14,7 @@ from typing import List, Optional, Tuple
 
 from fastapi import APIRouter, Depends
 
+from algorithms.advanced_template_matching import AdvancedTemplateDetector
 from algorithms.aruco_detection import ArucoDetector
 from algorithms.color_detection import ColorDetector
 from algorithms.edge_detection import EdgeDetector
@@ -27,6 +28,7 @@ from image.transform import apply_reference_transform_batch
 from managers.image_manager import ImageManager
 from managers.template_manager import TemplateManager
 from models import (
+    AdvancedTemplateMatchRequest,
     ArucoDetectRequest,
     ArucoReferenceRequest,
     ArucoReferenceResponse,
@@ -183,6 +185,80 @@ async def template_match(
     logger.debug(
         f"Template matching: {len(result['objects'])} matches in {processing_time}ms "
         f"(reference={request.reference_object is not None})"
+    )
+
+    return VisionResponse(
+        objects=result["objects"],
+        thumbnail_base64=thumbnail_base64,
+        processing_time_ms=processing_time,
+    )
+
+
+@router.post("/advanced-template-match")
+@safe_endpoint
+async def advanced_template_match(
+    request: AdvancedTemplateMatchRequest,
+    image_manager: ImageManager = Depends(get_image_manager),
+    template_manager: TemplateManager = Depends(get_template_manager),
+) -> VisionResponse:
+    """
+    Perform advanced template matching with rotation and multi-instance support.
+
+    Features:
+    - Multi-instance detection: Find all matches above threshold with NMS filtering
+    - Rotation-invariant matching: Search across configurable angle ranges
+    - Overlap filtering: Remove duplicate detections using IoU threshold
+
+    INPUT constraints:
+    - roi: Optional region to limit template search area
+    - params.find_multiple: Enable multi-instance detection
+    - params.enable_rotation: Enable rotation-invariant matching
+    - params.rotation_range: Angle range for rotation search
+    - params.rotation_step: Rotation step size (smaller = more accurate but slower)
+
+    OUTPUT results:
+    - bounding_box: Location where template was found
+    - rotation: Rotation angle in degrees (if enable_rotation=True)
+    - confidence: Match confidence score (0.0 to 1.0)
+    """
+    # Validate request
+    roi_dict = validate_vision_request(request.image_id, request.roi, image_manager)
+
+    # Get template
+    template_id = request.params.template_id
+    template = template_manager.get_template(template_id)
+    if template is None:
+        raise TemplateNotFoundException(template_id)
+
+    # Convert params to dict
+    params_dict = request.params.to_dict()
+
+    # Create detector function
+    def detect_func(image):
+        detector = AdvancedTemplateDetector()
+        return detector.detect(
+            image=image, template=template, template_id=template_id, params=params_dict
+        )
+
+    # Execute detection using helper
+    result, thumbnail_base64, processing_time = _execute_detection(
+        image_id=request.image_id,
+        image_manager=image_manager,
+        detector_func=detect_func,
+        roi=roi_dict,
+    )
+
+    # Apply reference frame transformation if provided
+    if request.reference_object is not None:
+        result["objects"] = apply_reference_transform_batch(
+            result["objects"], request.reference_object
+        )
+
+    logger.debug(
+        f"Advanced template matching: {len(result['objects'])} matches in {processing_time}ms "
+        f"(rotation={request.params.enable_rotation}, "
+        f"multi={request.params.find_multiple}, "
+        f"reference={request.reference_object is not None})"
     )
 
     return VisionResponse(

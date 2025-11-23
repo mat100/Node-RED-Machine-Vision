@@ -827,6 +827,78 @@ class TemplateMatchParams(BaseDetectionParams):
     )
 
 
+class AdvancedTemplateMatchParams(BaseDetectionParams):
+    """
+    Advanced template matching parameters with rotation and multi-instance support.
+
+    Extends basic template matching with:
+    - Multiple instance detection using Non-Maximum Suppression (NMS)
+    - Rotation-invariant matching across specified angle range
+    - Overlap filtering for duplicate removal
+    """
+
+    template_id: str = Field(description="Template identifier to match against")
+    method: TemplateMethod = Field(
+        default=TemplateMethod.TM_CCOEFF_NORMED,
+        description="OpenCV template matching method",
+    )
+    threshold: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=1.0,
+        description="Match confidence threshold (0.0 to 1.0)",
+    )
+
+    # Multi-instance detection
+    find_multiple: bool = Field(
+        default=False,
+        description="Enable multi-instance detection (find all matches above threshold)",
+    )
+    max_matches: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Maximum number of matches to return when find_multiple=True",
+    )
+    overlap_threshold: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "IoU threshold for NMS overlap filtering "
+            "(0.0 = no overlap allowed, 1.0 = full overlap allowed)"
+        ),
+    )
+
+    # Rotation detection
+    enable_rotation: bool = Field(
+        default=False,
+        description="Enable rotation-invariant matching (searches across rotation_range)",
+    )
+    rotation_range: tuple = Field(
+        default=(-180.0, 180.0),
+        description="Rotation angle range in degrees (min, max) for rotation search",
+    )
+    rotation_step: float = Field(
+        default=10.0,
+        ge=1.0,
+        le=90.0,
+        description="Rotation step size in degrees (smaller = more accurate but slower)",
+    )
+
+    @validator("rotation_range")
+    def validate_rotation_range(cls, v):
+        """Validate rotation range is valid tuple."""
+        if not isinstance(v, (tuple, list)) or len(v) != 2:
+            raise ValueError("rotation_range must be a tuple/list of 2 values (min, max)")
+        min_angle, max_angle = v
+        if min_angle >= max_angle:
+            raise ValueError(f"rotation_range min ({min_angle}) must be < max ({max_angle})")
+        if min_angle < -180 or max_angle > 180:
+            raise ValueError("rotation_range must be within [-180, 180] degrees")
+        return tuple(v)  # Ensure it's a tuple
+
+
 class ArucoReferenceParams(BaseDetectionParams):
     """
     ArUco reference frame parameters.
@@ -893,6 +965,23 @@ class TemplateMatchRequest(BaseModel):
     roi: Optional[ROI] = Field(None, description="Region of interest to limit search area")
     params: TemplateMatchParams = Field(
         description="Template matching parameters (template_id is required)"
+    )
+    reference_object: Optional[ReferenceObject] = Field(
+        None,
+        description=(
+            "Optional reference frame for coordinate transformation. "
+            "If provided, adds plane_* properties to detected objects."
+        ),
+    )
+
+
+class AdvancedTemplateMatchRequest(BaseModel):
+    """Request for advanced template matching with rotation and multi-instance support"""
+
+    image_id: str
+    roi: Optional[ROI] = Field(None, description="Region of interest to limit search area")
+    params: AdvancedTemplateMatchParams = Field(
+        description="Advanced template matching parameters (rotation, multi-instance, etc.)"
     )
     reference_object: Optional[ReferenceObject] = Field(
         None,

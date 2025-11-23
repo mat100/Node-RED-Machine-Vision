@@ -64,10 +64,17 @@ This backend is **specifically designed** to be controlled through the Node-RED 
 - ID-based tracking
 
 #### Template Matching
-- Normalized cross-correlation
-- Learn templates from captured images
-- Upload custom template images
-- Multi-scale matching
+- **Basic** (`/template-match`):
+  - Normalized cross-correlation
+  - Learn templates from captured images
+  - Upload custom template images
+  - Multi-scale matching
+- **Advanced** (`/advanced-template-match`):
+  - **Rotation-invariant matching**: Detect objects at any angle (±180°)
+  - **Multi-instance detection**: Find all occurrences in a single pass
+  - **Non-Maximum Suppression (NMS)**: Intelligent overlap filtering
+  - **Configurable search**: Custom rotation ranges and step sizes
+  - Industrial-grade performance for batch inspection
 
 #### Rotation Detection
 - **3 methods**: PCA (Principal Component Analysis), MinAreaRect, Image Moments
@@ -292,7 +299,8 @@ Node-RED                API Router              ImageManager       Algorithm
 | `/edge-detect` | POST | Edge detection (Canny, Sobel, Laplacian, Prewitt, Scharr) |
 | `/color-detect` | POST | Color detection (HSV-based) |
 | `/aruco-detect` | POST | ArUco marker detection |
-| `/template-match` | POST | Template matching |
+| `/template-match` | POST | Basic template matching (single instance, no rotation) |
+| `/advanced-template-match` | POST | Advanced template matching (multi-instance, rotation-invariant) |
 | `/rotation-detect` | POST | Rotation analysis (PCA, MinAreaRect, Moments) |
 
 ### Template Management (`/api/template`)
