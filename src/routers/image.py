@@ -8,6 +8,7 @@ import time
 
 import cv2
 from fastapi import APIRouter, Depends
+from fastapi.responses import Response
 
 from dependencies import get_image_manager
 from domain_types import ROI, Point
@@ -19,6 +20,45 @@ from models import ImageImportRequest, ROIExtractRequest, VisionObject, VisionRe
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+@router.get("/{image_id}")
+@safe_endpoint
+async def get_image(
+    image_id: str, image_manager: ImageManager = Depends(get_image_manager)
+) -> Response:
+    """
+    Get full quality image by ID.
+
+    Returns the complete image stored in ImageManager as JPEG.
+    Useful for downloading processed images at full resolution.
+
+    Args:
+        image_id: UUID of the image in ImageManager
+        image_manager: Image manager dependency
+
+    Returns:
+        JPEG image as Response
+
+    Raises:
+        ImageNotFoundException: If image_id not found in cache
+    """
+    # Get image from manager
+    image = image_manager.get(image_id)
+    if image is None:
+        logger.error(f"Image {image_id} not found in cache")
+        raise ImageNotFoundException(image_id)
+
+    # Encode as JPEG (quality 95 for download)
+    success, encoded_image = cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, 95])
+    if not success:
+        logger.error(f"Failed to encode image {image_id}")
+        raise ValueError(f"Failed to encode image {image_id}")
+
+    logger.info(f"Returning full image {image_id} ({image.shape[1]}x{image.shape[0]})")
+
+    # Return as JPEG response
+    return Response(content=encoded_image.tobytes(), media_type="image/jpeg")
 
 
 @router.post("/extract-roi")
