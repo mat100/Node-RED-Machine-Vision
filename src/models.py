@@ -1089,3 +1089,44 @@ class RotationDetectRequest(BaseModel):
                 f"Contour must have at least 5 points for rotation detection, got {len(v)}"
             )
         return v
+
+
+# ==============================================================================
+# Test Image Models
+# ==============================================================================
+
+
+class TestImageInfo(BaseModel):
+    """Test image information"""
+
+    id: str
+    filename: str
+    original_filename: str
+    size: Size
+    created_at: datetime
+
+    @classmethod
+    def from_manager_dict(cls, data: Dict[str, Any]) -> "TestImageInfo":
+        """Create from manager dictionary"""
+        return cls(
+            id=data["id"],
+            filename=data["filename"],
+            original_filename=data["original_filename"],
+            size=Size(**data["size"]),
+            created_at=datetime.fromisoformat(data["created_at"]),
+        )
+
+
+class TestImageUploadResponse(BaseModel):
+    """Response from test image upload"""
+
+    success: bool
+    test_id: str
+    filename: str
+    size: Size
+
+
+class TestImageCaptureResponse(VisionResponse):
+    """Response from test image capture endpoint (same as camera capture)"""
+
+    test_id: Optional[str] = Field(None, description="Test image ID that was captured")

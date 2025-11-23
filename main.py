@@ -30,9 +30,10 @@ from managers.camera_manager import CameraManager  # noqa: E402
 # Import core components  # noqa: E402
 from managers.image_manager import ImageManager  # noqa: E402
 from managers.template_manager import TemplateManager  # noqa: E402
+from managers.test_image_manager import TestImageManager  # noqa: E402
 
 # Import routers  # noqa: E402
-from routers import camera, image, system, template, vision  # noqa: E402
+from routers import camera, image, system, template, test_image, vision  # noqa: E402
 
 # Get configuration
 settings = get_settings()
@@ -54,13 +55,14 @@ except Exception:
 image_manager = None
 camera_manager = None
 template_manager = None
+test_image_manager = None
 shutdown_event = asyncio.Event()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle"""
-    global image_manager, camera_manager, template_manager
+    global image_manager, camera_manager, template_manager, test_image_manager
 
     # Startup
     logger.info("Starting Machine Vision Flow server...")
@@ -80,12 +82,15 @@ async def lifespan(app: FastAPI):
 
     template_manager = TemplateManager(storage_path=settings.template.storage_path)
 
+    test_image_manager = TestImageManager(storage_path=settings.test_image.storage_path)
+
     logger.info("All managers initialized successfully")
 
     # Store managers in app state for access by routers
     app.state.image_manager = image_manager
     app.state.camera_manager = camera_manager
     app.state.template_manager = template_manager
+    app.state.test_image_manager = test_image_manager
     app.state.config = settings.to_dict()
     app.state.debug = settings.system.debug
 
@@ -138,6 +143,7 @@ register_exception_handlers(app)
 app.include_router(camera.router, prefix="/api/camera", tags=["Camera"])
 app.include_router(vision.router, prefix="/api/vision", tags=["Vision"])
 app.include_router(template.router, prefix="/api/template", tags=["Template"])
+app.include_router(test_image.router, prefix="/api/test-image", tags=["Test Image"])
 app.include_router(image.router, prefix="/api/image", tags=["Image"])
 app.include_router(system.router, prefix="/api/system", tags=["System"])
 
@@ -153,6 +159,7 @@ async def root():
             "camera": "/api/camera",
             "vision": "/api/vision",
             "template": "/api/template",
+            "test-image": "/api/test-image",
             "image": "/api/image",
             "system": "/api/system",
             "docs": "/docs",
@@ -172,6 +179,8 @@ async def health_check():
             and app.state.camera_manager is not None,
             "template_manager": hasattr(app.state, "template_manager")
             and app.state.template_manager is not None,
+            "test_image_manager": hasattr(app.state, "test_image_manager")
+            and app.state.test_image_manager is not None,
         },
     }
 

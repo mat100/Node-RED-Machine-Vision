@@ -14,6 +14,7 @@ from domain_types import ROI
 from managers.camera_manager import CameraManager
 from managers.image_manager import ImageManager
 from managers.template_manager import TemplateManager
+from managers.test_image_manager import TestImageManager
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +30,12 @@ class Managers:
         image_manager: ImageManager,
         camera_manager: CameraManager,
         template_manager: TemplateManager,
+        test_image_manager: TestImageManager,
     ):
         self.image_manager = image_manager
         self.camera_manager = camera_manager
         self.template_manager = template_manager
+        self.test_image_manager = test_image_manager
 
 
 def get_managers(request: Request) -> Managers:
@@ -53,6 +56,7 @@ def get_managers(request: Request) -> Managers:
             image_manager=request.app.state.image_manager,
             camera_manager=request.app.state.camera_manager,
             template_manager=request.app.state.template_manager,
+            test_image_manager=request.app.state.test_image_manager,
         )
     except AttributeError as e:
         logger.error(f"Managers not initialized in app state: {e}")
@@ -74,6 +78,11 @@ def get_camera_manager(managers: Managers = Depends(get_managers)) -> CameraMana
 def get_template_manager(managers: Managers = Depends(get_managers)) -> TemplateManager:
     """Get TemplateManager instance."""
     return managers.template_manager
+
+
+def get_test_image_manager(managers: Managers = Depends(get_managers)) -> TestImageManager:
+    """Get TestImageManager instance."""
+    return managers.test_image_manager
 
 
 def validate_image_exists(

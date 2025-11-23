@@ -456,6 +456,21 @@ class TemplateConstants:
     MAX_TEMPLATE_SIZE = 500  # pixels
 
 
+class TestImageConstants:
+    """Constants related to test image storage."""
+
+    # Storage
+    # Development: relative path "data/test_images"
+    # Production: absolute path "/var/lib/machine-vision/test_images"
+    # Override via MV_TEST_IMAGE_STORAGE_PATH environment variable
+    DEFAULT_STORAGE_PATH = "data/test_images"
+    MAX_FILE_SIZE_MB = 50
+    ALLOWED_FORMATS = [".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp"]
+
+    # Test image limits
+    MAX_TEST_IMAGES = 100
+
+
 # Vision Processing Constants
 class VisionConstants:
     """Constants for computer vision operations."""

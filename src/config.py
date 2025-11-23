@@ -16,6 +16,7 @@ from domain_types import (
     ImageConstants,
     SystemConstants,
     TemplateConstants,
+    TestImageConstants,
     VisionConstants,
 )
 
@@ -148,6 +149,46 @@ class TemplateConfig(BaseSettings):
         extra = "ignore"
 
 
+class TestImageConfig(BaseSettings):
+    """Test image storage configuration."""
+
+    storage_path: str = Field(
+        default=TestImageConstants.DEFAULT_STORAGE_PATH,
+        description="Path to test image storage directory",
+    )
+    max_file_size_mb: int = Field(
+        default=TestImageConstants.MAX_FILE_SIZE_MB,
+        ge=1,
+        le=100,
+        description="Maximum test image file size in MB",
+    )
+    allowed_formats: List[str] = Field(
+        default=TestImageConstants.ALLOWED_FORMATS,
+        description="Allowed test image formats",
+    )
+    max_test_images: int = Field(
+        default=TestImageConstants.MAX_TEST_IMAGES,
+        ge=1,
+        le=1000,
+        description="Maximum number of test images",
+    )
+
+    @validator("storage_path")
+    def validate_storage_path(cls, v):
+        """Ensure storage path exists or can be created."""
+        path = Path(v)
+        if not path.exists():
+            try:
+                path.mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                raise ValueError(f"Cannot create storage path: {e}")
+        return str(path.absolute())
+
+    class Config:
+        env_prefix = "MV_TEST_IMAGE_"
+        extra = "ignore"
+
+
 class VisionConfig(BaseSettings):
     """Vision processing configuration."""
 
@@ -274,6 +315,7 @@ class Settings(BaseSettings):
     image: ImageConfig = Field(default_factory=ImageConfig)
     camera: CameraConfig = Field(default_factory=CameraConfig)
     template: TemplateConfig = Field(default_factory=TemplateConfig)
+    test_image: TestImageConfig = Field(default_factory=TestImageConfig)
     vision: VisionConfig = Field(default_factory=VisionConfig)
     api: APIConfig = Field(default_factory=APIConfig)
     system: SystemConfig = Field(default_factory=SystemConfig)
