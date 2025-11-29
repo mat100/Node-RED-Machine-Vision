@@ -152,11 +152,13 @@ async def template_match(
     # Validate request
     roi_dict = validate_vision_request(request.image_id, request.roi, image_manager)
 
-    # Get template
+    # Get template and mask
     template_id = request.params.template_id
     template = template_manager.get_template(template_id)
     if template is None:
         raise TemplateNotFoundException(template_id)
+
+    mask = template_manager.get_template_mask(template_id)
 
     # Convert params to dict
     params_dict = request.params.to_dict()
@@ -165,7 +167,7 @@ async def template_match(
     def detect_func(image):
         detector = TemplateDetector()
         return detector.detect(
-            image=image, template=template, template_id=template_id, params=params_dict
+            image=image, template=template, template_id=template_id, params=params_dict, mask=mask
         )
 
     # Execute detection using helper
@@ -224,11 +226,13 @@ async def advanced_template_match(
     # Validate request
     roi_dict = validate_vision_request(request.image_id, request.roi, image_manager)
 
-    # Get template
+    # Get template and mask
     template_id = request.params.template_id
     template = template_manager.get_template(template_id)
     if template is None:
         raise TemplateNotFoundException(template_id)
+
+    mask = template_manager.get_template_mask(template_id)
 
     # Convert params to dict
     params_dict = request.params.to_dict()
@@ -237,7 +241,7 @@ async def advanced_template_match(
     def detect_func(image):
         detector = AdvancedTemplateDetector()
         return detector.detect(
-            image=image, template=template, template_id=template_id, params=params_dict
+            image=image, template=template, template_id=template_id, params=params_dict, mask=mask
         )
 
     # Execute detection using helper

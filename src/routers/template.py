@@ -39,10 +39,10 @@ async def upload_template(
     template_manager: TemplateManager = Depends(get_template_manager),
 ) -> TemplateUploadResponse:
     """Upload new template"""
-    # Read and decode image
+    # Read and decode image (preserve alpha channel if present)
     contents = await file.read()
     nparr = np.frombuffer(contents, np.uint8)
-    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    image = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED)
 
     if image is None:
         raise HTTPException(status_code=400, detail="Invalid image file")

@@ -34,6 +34,7 @@ class AdvancedTemplateDetector(BaseDetector):
         template: np.ndarray,
         template_id: str,
         params: Dict[str, Any],
+        mask: np.ndarray = None,
     ) -> Dict:
         """
         Perform advanced template matching with rotation and multi-instance support.
@@ -51,6 +52,7 @@ class AdvancedTemplateDetector(BaseDetector):
                 - enable_rotation: Enable rotation search
                 - rotation_range: (min, max) angle range in degrees
                 - rotation_step: Rotation step size in degrees
+            mask: Optional mask (alpha channel) for template matching
 
         Returns:
             Dictionary with detection results
@@ -89,6 +91,7 @@ class AdvancedTemplateDetector(BaseDetector):
                 find_multiple,
                 max_matches,
                 overlap_threshold,
+                mask,
             )
         else:
             # Standard matching (potentially multi-instance)
@@ -102,6 +105,7 @@ class AdvancedTemplateDetector(BaseDetector):
                 max_matches,
                 overlap_threshold,
                 rotation_angle=0.0,
+                mask=mask,
             )
 
         # Create visualization
@@ -127,6 +131,7 @@ class AdvancedTemplateDetector(BaseDetector):
         max_matches: int,
         overlap_threshold: float,
         rotation_angle: float = 0.0,
+        mask: np.ndarray = None,
     ) -> List[VisionObject]:
         """
         Perform template matching (single or multi-instance).
@@ -141,13 +146,33 @@ class AdvancedTemplateDetector(BaseDetector):
             max_matches: Maximum number of matches
             overlap_threshold: IoU threshold for NMS
             rotation_angle: Rotation angle of template (for metadata)
+            mask: Optional mask for template matching
 
         Returns:
             List of VisionObject instances
         """
+        # Prepare mask for template matching if provided
+        mask_for_matching = None
+        if mask is not None:
+            # Ensure mask is uint8
+            if mask.dtype != np.uint8:
+                mask_for_matching = mask.astype(np.uint8)
+            else:
+                mask_for_matching = mask
+
+            # Ensure mask is same size as template
+            if mask_for_matching.shape[:2] != template.shape[:2]:
+                mask_for_matching = cv2.resize(
+                    mask_for_matching,
+                    (template.shape[1], template.shape[0]),
+                )
+
         # Perform template matching
         cv_method = getattr(cv2, method)
-        result = cv2.matchTemplate(image, template, cv_method)
+        if mask_for_matching is not None:
+            result = cv2.matchTemplate(image, template, cv_method, mask=mask_for_matching)
+        else:
+            result = cv2.matchTemplate(image, template, cv_method)
 
         # Get template dimensions
         h, w = template.shape[:2]
@@ -207,6 +232,7 @@ class AdvancedTemplateDetector(BaseDetector):
         find_multiple: bool,
         max_matches: int,
         overlap_threshold: float,
+        mask: np.ndarray = None,
     ) -> List[VisionObject]:
         """
         Perform template matching with rotation search.
@@ -222,6 +248,7 @@ class AdvancedTemplateDetector(BaseDetector):
             find_multiple: Whether to find multiple instances
             max_matches: Maximum number of matches
             overlap_threshold: IoU threshold for NMS
+            mask: Optional mask for template matching
 
         Returns:
             List of VisionObject instances with best rotation matches
@@ -238,6 +265,11 @@ class AdvancedTemplateDetector(BaseDetector):
             # Rotate template
             rotated_template = self._rotate_image(template, angle)
 
+            # Rotate mask if provided
+            rotated_mask = None
+            if mask is not None:
+                rotated_mask = self._rotate_image(mask, angle)
+
             # Match with rotated template
             matches = self._match_template(
                 image,
@@ -249,6 +281,7 @@ class AdvancedTemplateDetector(BaseDetector):
                 max_matches=max_matches * 2,  # Collect more candidates for NMS
                 overlap_threshold=1.0,  # No NMS yet (we'll apply it globally)
                 rotation_angle=angle,
+                mask=rotated_mask,
             )
 
             all_matches.extend(matches)

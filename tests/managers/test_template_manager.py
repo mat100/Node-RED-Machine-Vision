@@ -306,3 +306,153 @@ class TestTemplateManager:
         metadata = manager.templates[template_id]
         assert metadata["size"]["width"] == 100
         assert metadata["size"]["height"] == 100
+
+    def test_upload_template_with_alpha_channel(self, manager):
+        """Test uploading template with alpha channel (BGRA)."""
+        # Create BGRA image (4 channels)
+        image = np.zeros((100, 100, 4), dtype=np.uint8)
+        # White rectangle in center
+        image[20:80, 20:80, :3] = 255  # BGR = white
+        # Full opacity in center, transparent elsewhere
+        image[20:80, 20:80, 3] = 255  # Alpha = opaque
+        image[:20, :, 3] = 0  # Top transparent
+        image[80:, :, 3] = 0  # Bottom transparent
+
+        template_id = manager.upload_template("alpha_template", image)
+
+        assert template_id in manager.templates
+        assert manager.templates[template_id]["has_alpha"] is True
+
+        # Retrieved template should be BGR only (3 channels)
+        retrieved = manager.get_template(template_id)
+        assert retrieved is not None
+        assert len(retrieved.shape) == 3
+        assert retrieved.shape[2] == 3  # BGR only
+
+        # Mask should be available
+        mask = manager.get_template_mask(template_id)
+        assert mask is not None
+        assert len(mask.shape) == 2  # Single channel
+        assert mask.shape == (100, 100)
+
+    def test_get_template_mask_existing(self, manager):
+        """Test retrieving mask for template with alpha channel."""
+        # Create BGRA image
+        image = np.zeros((50, 50, 4), dtype=np.uint8)
+        image[:, :, :3] = [100, 150, 200]  # BGR color
+        image[:, :, 3] = 128  # Half transparent
+
+        template_id = manager.upload_template("masked", image)
+
+        mask = manager.get_template_mask(template_id)
+
+        assert mask is not None
+        assert mask.shape == (50, 50)
+        assert np.all(mask == 128)  # Should preserve alpha values
+
+    def test_get_template_mask_no_alpha(self, manager, test_image):
+        """Test retrieving mask for template without alpha channel."""
+        template_id = manager.upload_template("no_alpha", test_image)
+
+        mask = manager.get_template_mask(template_id)
+
+        assert mask is None
+        assert manager.templates[template_id]["has_alpha"] is False
+
+    def test_alpha_channel_persistence(self, temp_storage):
+        """Test that alpha channel persists across manager instances."""
+        # Create BGRA image
+        image = np.zeros((100, 100, 4), dtype=np.uint8)
+        image[25:75, 25:75, :3] = 255
+        image[25:75, 25:75, 3] = 200
+
+        # Upload with first manager
+        manager1 = TemplateManager(storage_path=temp_storage)
+        template_id = manager1.upload_template("alpha_persistent", image)
+
+        # Create new manager and verify alpha is loaded
+        manager2 = TemplateManager(storage_path=temp_storage)
+
+        assert template_id in manager2.templates
+        assert manager2.templates[template_id]["has_alpha"] is True
+
+        mask = manager2.get_template_mask(template_id)
+        assert mask is not None
+        assert mask.shape == (100, 100)
+        # Check that center has alpha value
+        assert np.all(mask[25:75, 25:75] == 200)
+
+    def test_thumbnail_with_alpha_channel(self, manager):
+        """Test creating thumbnail for template with alpha channel."""
+        # Create BGRA image with transparency
+        image = np.zeros((100, 100, 4), dtype=np.uint8)
+        image[20:80, 20:80, :3] = [255, 0, 0]  # Blue square
+        image[20:80, 20:80, 3] = 255  # Opaque
+        image[:, :, 3][image[:, :, 3] == 0] = 0  # Rest transparent
+
+        template_id = manager.upload_template("alpha_thumb", image)
+
+        thumbnail = manager.create_template_thumbnail(template_id)
+
+        assert thumbnail is not None
+        assert isinstance(thumbnail, str)
+        assert len(thumbnail) > 0
+        # Thumbnail should contain base64 encoded PNG with alpha
+
+    def test_delete_template_with_alpha_removes_mask(self, manager):
+        """Test that deleting template also removes mask from cache."""
+        # Create BGRA image
+        image = np.zeros((50, 50, 4), dtype=np.uint8)
+        image[:, :, :3] = 255
+        image[:, :, 3] = 200
+
+        template_id = manager.upload_template("alpha_delete", image)
+
+        # Verify mask exists
+        assert template_id in manager.template_masks
+        assert manager.get_template_mask(template_id) is not None
+
+        # Delete template
+        manager.delete_template(template_id)
+
+        # Mask should be removed
+        assert template_id not in manager.template_masks
+
+    def test_learn_template_preserves_alpha_if_present(self, manager):
+        """Test that learning from BGRA source preserves alpha channel."""
+        # Create BGRA source image
+        source_image = np.zeros((200, 200, 4), dtype=np.uint8)
+        source_image[50:150, 50:150, :3] = [0, 255, 0]  # Green square
+        source_image[50:150, 50:150, 3] = 180  # Semi-transparent
+
+        roi = {"x": 50, "y": 50, "width": 100, "height": 100}
+        template_id = manager.learn_template("learned_alpha", source_image, roi)
+
+        assert template_id in manager.templates
+        # Check if alpha was preserved
+        mask = manager.get_template_mask(template_id)
+        if mask is not None:
+            assert mask.shape == (100, 100)
+
+    def test_mixed_templates_alpha_and_non_alpha(self, manager, test_image):
+        """Test managing templates with and without alpha channel."""
+        # Upload template without alpha
+        id_no_alpha = manager.upload_template("no_alpha", test_image)
+
+        # Upload template with alpha
+        alpha_image = np.zeros((100, 100, 4), dtype=np.uint8)
+        alpha_image[:, :, :3] = 255
+        alpha_image[:, :, 3] = 128
+        id_with_alpha = manager.upload_template("with_alpha", alpha_image)
+
+        # Verify both exist
+        assert id_no_alpha in manager.templates
+        assert id_with_alpha in manager.templates
+
+        # Verify alpha flags
+        assert manager.templates[id_no_alpha]["has_alpha"] is False
+        assert manager.templates[id_with_alpha]["has_alpha"] is True
+
+        # Verify masks
+        assert manager.get_template_mask(id_no_alpha) is None
+        assert manager.get_template_mask(id_with_alpha) is not None

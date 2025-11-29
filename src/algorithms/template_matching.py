@@ -28,6 +28,7 @@ class TemplateDetector(BaseDetector):
         template: np.ndarray,
         template_id: str,
         params: Dict[str, Any],
+        mask: np.ndarray = None,
     ) -> Dict:
         """
         Perform template matching on image.
@@ -37,6 +38,7 @@ class TemplateDetector(BaseDetector):
             template: Template image to search for
             template_id: Template identifier for metadata
             params: Detection parameters dict
+            mask: Optional mask (alpha channel) for template matching
 
         Returns:
             Dictionary with detection results
@@ -56,9 +58,30 @@ class TemplateDetector(BaseDetector):
         else:
             template_gray = template
 
+        # Prepare mask for template matching if provided
+        mask_for_matching = None
+        if mask is not None:
+            # Ensure mask is uint8
+            if mask.dtype != np.uint8:
+                mask_for_matching = mask.astype(np.uint8)
+            else:
+                mask_for_matching = mask
+
+            # Ensure mask is same size as template
+            if mask_for_matching.shape[:2] != template_gray.shape[:2]:
+                mask_for_matching = cv2.resize(
+                    mask_for_matching,
+                    (template_gray.shape[1], template_gray.shape[0]),
+                )
+
         # Perform template matching
         cv_method = getattr(cv2, method)
-        result = cv2.matchTemplate(search_gray, template_gray, cv_method)
+        if mask_for_matching is not None:
+            result = cv2.matchTemplate(
+                search_gray, template_gray, cv_method, mask=mask_for_matching
+            )
+        else:
+            result = cv2.matchTemplate(search_gray, template_gray, cv_method)
 
         # Find matches above threshold
         detected_objects = []

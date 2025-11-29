@@ -32,6 +32,7 @@ class TemplateManager:
         # Template cache
         self.templates: Dict[str, Dict] = {}
         self.template_images: Dict[str, np.ndarray] = {}
+        self.template_masks: Dict[str, Optional[np.ndarray]] = {}  # Alpha channel masks
 
         # Thread safety
         self.lock = Lock()
@@ -54,9 +55,18 @@ class TemplateManager:
                 for template_id, info in self.templates.items():
                     image_path = self.storage_path / info["filename"]
                     if image_path.exists():
-                        img = cv2.imread(str(image_path))
+                        img = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
                         if img is not None:
-                            self.template_images[template_id] = img
+                            # Split into BGR and mask if alpha channel present
+                            if len(img.shape) == 3 and img.shape[2] == 4:
+                                bgr = img[:, :, :3]  # First 3 channels
+                                alpha = img[:, :, 3]  # Alpha channel
+                                self.template_images[template_id] = bgr
+                                self.template_masks[template_id] = alpha
+                            else:
+                                # No alpha channel
+                                self.template_images[template_id] = img
+                                self.template_masks[template_id] = None
                         else:
                             logger.warning(f"Failed to load template image: {image_path}")
 
@@ -99,8 +109,17 @@ class TemplateManager:
             file_path = self.storage_path / filename
 
             try:
-                # Save image
-                cv2.imwrite(str(file_path), image)
+                # Save image (preserve alpha channel if present)
+                cv2.imwrite(str(file_path), image, [cv2.IMWRITE_PNG_COMPRESSION, 9])
+
+                # Extract mask if alpha channel present
+                mask = None
+                if len(image.shape) == 3 and image.shape[2] == 4:
+                    bgr = image[:, :, :3]
+                    mask = image[:, :, 3]
+                    stored_image = bgr
+                else:
+                    stored_image = image
 
                 # Store metadata
                 self.templates[template_id] = {
@@ -109,11 +128,13 @@ class TemplateManager:
                     "description": description,
                     "filename": filename,
                     "size": {"width": image.shape[1], "height": image.shape[0]},
+                    "has_alpha": mask is not None,
                     "created_at": datetime.now().isoformat(),
                 }
 
-                # Cache image
-                self.template_images[template_id] = image
+                # Cache image and mask
+                self.template_images[template_id] = stored_image
+                self.template_masks[template_id] = mask
 
                 # Save metadata
                 self._save_metadata()
@@ -175,12 +196,43 @@ class TemplateManager:
             if template_id in self.templates:
                 file_path = self.storage_path / self.templates[template_id]["filename"]
                 if file_path.exists():
-                    img = cv2.imread(str(file_path))
+                    img = cv2.imread(str(file_path), cv2.IMREAD_UNCHANGED)
                     if img is not None:
-                        self.template_images[template_id] = img
-                        return img.copy()
+                        # Split into BGR and mask if alpha channel present
+                        if len(img.shape) == 3 and img.shape[2] == 4:
+                            bgr = img[:, :, :3]
+                            alpha = img[:, :, 3]
+                            self.template_images[template_id] = bgr
+                            self.template_masks[template_id] = alpha
+                            return bgr.copy()
+                        else:
+                            self.template_images[template_id] = img
+                            self.template_masks[template_id] = None
+                            return img.copy()
 
         logger.warning(f"Template not found: {template_id}")
+        return None
+
+    def get_template_mask(self, template_id: str) -> Optional[np.ndarray]:
+        """
+        Get template mask (alpha channel)
+
+        Args:
+            template_id: Template identifier
+
+        Returns:
+            Mask (alpha channel) as grayscale image or None if no alpha channel
+        """
+        with self.lock:
+            # Ensure template is loaded
+            if template_id not in self.template_masks:
+                # Try loading it
+                self.get_template(template_id)
+
+            if template_id in self.template_masks:
+                mask = self.template_masks[template_id]
+                return mask.copy() if mask is not None else None
+
         return None
 
     def get_template_info(self, template_id: str) -> Optional[Dict]:
@@ -218,6 +270,8 @@ class TemplateManager:
                 # Remove from cache
                 if template_id in self.template_images:
                     del self.template_images[template_id]
+                if template_id in self.template_masks:
+                    del self.template_masks[template_id]
 
                 # Remove metadata
                 del self.templates[template_id]
@@ -270,6 +324,9 @@ class TemplateManager:
 
         import base64
 
+        # Get mask if present
+        mask = self.get_template_mask(template_id)
+
         # Calculate size maintaining aspect ratio
         aspect = template.shape[0] / template.shape[1]
         width = min(max_width, template.shape[1])
@@ -277,6 +334,14 @@ class TemplateManager:
 
         # Resize using Lanczos interpolation for quality
         thumbnail = cv2.resize(template, (width, height), interpolation=cv2.INTER_LANCZOS4)
+
+        # If mask exists, resize and combine with thumbnail
+        if mask is not None:
+            mask_resized = cv2.resize(mask, (width, height), interpolation=cv2.INTER_LANCZOS4)
+            # Combine BGR + alpha into BGRA
+            thumbnail = cv2.merge(
+                [thumbnail[:, :, 0], thumbnail[:, :, 1], thumbnail[:, :, 2], mask_resized]
+            )
 
         # Encode to PNG
         success, buffer = cv2.imencode(".png", thumbnail)
