@@ -18,6 +18,7 @@ from algorithms.advanced_template_matching import AdvancedTemplateDetector
 from algorithms.aruco_detection import ArucoDetector
 from algorithms.color_detection import ColorDetector
 from algorithms.edge_detection import EdgeDetector
+from algorithms.feature_template_matching import FeatureTemplateDetector
 from algorithms.rotation_detection import RotationDetector
 from algorithms.template_matching import TemplateDetector
 from dependencies import get_image_manager, get_template_manager, validate_vision_request
@@ -34,6 +35,7 @@ from models import (
     ArucoReferenceResponse,
     ColorDetectRequest,
     EdgeDetectRequest,
+    FeatureTemplateMatchRequest,
     RotationDetectRequest,
     TemplateMatchRequest,
     VisionObject,
@@ -262,6 +264,77 @@ async def advanced_template_match(
         f"Advanced template matching: {len(result['objects'])} matches in {processing_time}ms "
         f"(rotation={request.params.enable_rotation}, "
         f"multi={request.params.find_multiple}, "
+        f"reference={request.reference_object is not None})"
+    )
+
+    return VisionResponse(
+        objects=result["objects"],
+        thumbnail_base64=thumbnail_base64,
+        processing_time_ms=processing_time,
+    )
+
+
+@router.post("/feature-template-match")
+@safe_endpoint
+async def feature_template_match(
+    request: FeatureTemplateMatchRequest,
+    image_manager: ImageManager = Depends(get_image_manager),
+    template_manager: TemplateManager = Depends(get_template_manager),
+) -> VisionResponse:
+    """
+    Perform feature-based template matching using ORB.
+
+    Rotation and scale invariant template matching using keypoint detection.
+
+    INPUT constraints:
+    - roi: Optional region to limit template search area
+    - params.min_matches: Minimum feature matches required
+    - params.ratio_threshold: Lowe's ratio test threshold
+
+    OUTPUT results:
+    - bounding_box: Location where template was found
+    - rotation: Rotation angle in degrees
+    - properties.scale: Scale factor relative to template
+    - properties.corners: Transformed template corners
+    """
+    # Validate request
+    roi_dict = validate_vision_request(request.image_id, request.roi, image_manager)
+
+    # Get template and mask
+    template_id = request.params.template_id
+    template = template_manager.get_template(template_id)
+    if template is None:
+        raise TemplateNotFoundException(template_id)
+
+    mask = template_manager.get_template_mask(template_id)
+
+    # Convert params to dict
+    params_dict = request.params.to_dict()
+
+    # Create detector function
+    def detect_func(image):
+        detector = FeatureTemplateDetector()
+        return detector.detect(
+            image=image, template=template, template_id=template_id, params=params_dict, mask=mask
+        )
+
+    # Execute detection using helper
+    result, thumbnail_base64, processing_time = _execute_detection(
+        image_id=request.image_id,
+        image_manager=image_manager,
+        detector_func=detect_func,
+        roi=roi_dict,
+    )
+
+    # Apply reference frame transformation if provided
+    if request.reference_object is not None:
+        result["objects"] = apply_reference_transform_batch(
+            result["objects"], request.reference_object
+        )
+
+    logger.debug(
+        f"Feature template matching: {len(result['objects'])} matches in {processing_time}ms "
+        f"(multi={request.params.find_multiple}, "
         f"reference={request.reference_object is not None})"
     )
 

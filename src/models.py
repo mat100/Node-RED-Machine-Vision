@@ -899,6 +899,45 @@ class AdvancedTemplateMatchParams(BaseDetectionParams):
         return tuple(v)  # Ensure it's a tuple
 
 
+class FeatureTemplateMatchParams(BaseDetectionParams):
+    """
+    Feature-based template matching parameters using ORB.
+
+    Uses keypoint detection and descriptor matching for rotation
+    and scale invariant template matching.
+    """
+
+    template_id: str = Field(description="Template identifier to match against")
+    threshold: float = Field(
+        default=0.6,
+        ge=0.0,
+        le=1.0,
+        description="Match confidence threshold (0.0 to 1.0)",
+    )
+    min_matches: int = Field(
+        default=10,
+        ge=4,
+        le=100,
+        description="Minimum number of feature matches required",
+    )
+    ratio_threshold: float = Field(
+        default=0.75,
+        ge=0.5,
+        le=0.95,
+        description="Lowe's ratio test threshold for match filtering",
+    )
+    find_multiple: bool = Field(
+        default=False,
+        description="Enable multi-instance detection",
+    )
+    max_matches: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Maximum number of instances to detect when find_multiple=True",
+    )
+
+
 class ArucoReferenceParams(BaseDetectionParams):
     """
     ArUco reference frame parameters.
@@ -982,6 +1021,23 @@ class AdvancedTemplateMatchRequest(BaseModel):
     roi: Optional[ROI] = Field(None, description="Region of interest to limit search area")
     params: AdvancedTemplateMatchParams = Field(
         description="Advanced template matching parameters (rotation, multi-instance, etc.)"
+    )
+    reference_object: Optional[ReferenceObject] = Field(
+        None,
+        description=(
+            "Optional reference frame for coordinate transformation. "
+            "If provided, adds plane_* properties to detected objects."
+        ),
+    )
+
+
+class FeatureTemplateMatchRequest(BaseModel):
+    """Request for feature-based template matching using ORB"""
+
+    image_id: str
+    roi: Optional[ROI] = Field(None, description="Region of interest to limit search area")
+    params: FeatureTemplateMatchParams = Field(
+        description="Feature-based template matching parameters"
     )
     reference_object: Optional[ReferenceObject] = Field(
         None,

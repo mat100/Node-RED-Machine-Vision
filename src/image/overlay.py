@@ -305,6 +305,79 @@ def render_template_matches(
     return result
 
 
+def render_feature_matches(
+    image: np.ndarray,
+    objects: List[VisionObject],
+    thickness: int = DEFAULT_THICKNESS,
+) -> np.ndarray:
+    """
+    Render feature-based template matching results.
+
+    Draws rotated bounding box (polygon) based on transformed corners,
+    rotation indicator arrow, and confidence score.
+
+    Args:
+        image: Input image
+        objects: List of detected feature matches
+        thickness: Line thickness for drawing
+
+    Returns:
+        Image with overlays
+    """
+    result = image.copy()
+
+    for obj in objects:
+        # Get transformed corners from properties
+        corners = obj.properties.get("corners")
+
+        if corners and len(corners) == 4:
+            # Draw rotated bounding box as polygon
+            pts = np.array(corners, dtype=np.int32)
+            cv2.polylines(result, [pts], isClosed=True, color=COLOR_SUCCESS, thickness=thickness)
+
+            # Draw corner markers
+            for pt in pts:
+                cv2.circle(result, tuple(pt), 4, COLOR_SUCCESS, -1)
+
+            # Draw rotation indicator arrow from center
+            center = (int(obj.center.x), int(obj.center.y))
+            rotation = obj.rotation if obj.rotation is not None else 0
+
+            # Arrow length proportional to object size
+            arrow_len = min(obj.bounding_box.width, obj.bounding_box.height) // 3
+            angle_rad = np.radians(rotation)
+            end_x = int(center[0] + arrow_len * np.cos(angle_rad))
+            end_y = int(center[1] - arrow_len * np.sin(angle_rad))  # Negative because Y is inverted
+            cv2.arrowedLine(result, center, (end_x, end_y), (0, 165, 255), thickness)
+
+            # Draw confidence label
+            label_x = int(pts[:, 0].min())
+            label_y = int(pts[:, 1].min()) - 10
+            draw_confidence(result, obj.confidence, label_x, label_y, COLOR_SUCCESS)
+
+            # Draw rotation angle
+            rotation_text = f"{rotation:.1f}deg"
+            cv2.putText(
+                result,
+                rotation_text,
+                (label_x, label_y - 20),
+                DEFAULT_FONT,
+                DEFAULT_FONT_SCALE,
+                COLOR_SUCCESS,
+                1,
+                DEFAULT_LINE_TYPE,
+            )
+        else:
+            # Fallback to axis-aligned bounding box
+            bbox = obj.bounding_box
+            draw_bounding_box(
+                result, bbox.x, bbox.y, bbox.width, bbox.height, COLOR_SUCCESS, thickness
+            )
+            draw_confidence(result, obj.confidence, bbox.x, bbox.y, COLOR_SUCCESS)
+
+    return result
+
+
 def render_edge_contours(
     image: np.ndarray,
     objects: List[VisionObject],

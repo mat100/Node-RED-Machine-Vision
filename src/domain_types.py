@@ -356,6 +356,7 @@ class VisionObjectType(str, Enum):
     CAMERA_CAPTURE = "camera_capture"
     EDGE_CONTOUR = "edge_contour"
     TEMPLATE_MATCH = "template_match"
+    FEATURE_TEMPLATE_MATCH = "feature_template_match"
     COLOR_REGION = "color_region"
     ARUCO_MARKER = "aruco_marker"
     ROTATION_ANALYSIS = "rotation_analysis"
