@@ -439,7 +439,7 @@ class TemplateConstants:
     # Storage
     DEFAULT_STORAGE_PATH = "data/templates"
     MAX_TEMPLATE_SIZE_MB = 10
-    ALLOWED_FORMATS = [".png", ".jpg", ".jpeg"]
+    ALLOWED_FORMATS = [".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp"]
 
     # Matching parameters
     DEFAULT_THRESHOLD = 0.8
