@@ -36,6 +36,8 @@ from models import (
     ColorDetectRequest,
     EdgeDetectRequest,
     FeatureTemplateMatchRequest,
+    PreprocessParams,
+    PreprocessRequest,
     RotationDetectRequest,
     TemplateMatchRequest,
     VisionObject,
@@ -706,6 +708,104 @@ async def rotation_detect(
 
     return VisionResponse(
         objects=result["objects"],
+        thumbnail_base64=thumbnail_base64,
+        processing_time_ms=processing_time,
+    )
+
+
+@router.post("/preprocess")
+@safe_endpoint
+async def preprocess(
+    request: PreprocessRequest,
+    image_manager: ImageManager = Depends(get_image_manager),
+) -> VisionResponse:
+    """
+    Apply preprocessing operations to image.
+
+    Returns thumbnail preview AND stores preprocessed image with new ID.
+    The new image_id is in objects[0].properties["image_id"].
+
+    Preprocessing operations are applied in a fixed sequence:
+    1. Grayscale → 2. Gaussian Blur → 3. Median Blur → 4. Bilateral Filter
+    5. Morphology → 6. Threshold → 7. Histogram Equalization → 8. CLAHE
+    9. Sharpening → 10. Brightness/Contrast
+
+    Each operation can be enabled/disabled via params.
+
+    INPUT:
+    - image_id: Source image ID
+    - roi: Optional region of interest
+    - params: Preprocessing parameters (all operations disabled by default)
+
+    OUTPUT:
+    - objects[0].properties["image_id"]: New preprocessed image ID
+    - objects[0].properties["operations_applied"]: List of applied operations
+    - thumbnail_base64: Preview of preprocessed result
+    """
+    from domain_types import Point
+    from image.preprocessing import PreprocessingPipeline
+
+    # Validate request
+    roi_dict = validate_vision_request(request.image_id, request.roi, image_manager)
+
+    # Create default params if not provided
+    params = request.params if request.params else PreprocessParams()
+
+    with timer() as t:
+        # Get source image
+        full_image = image_manager.get(request.image_id)
+        if full_image is None:
+            raise ImageNotFoundException(request.image_id)
+
+        # Extract ROI if specified
+        if roi_dict:
+            image = extract_roi(full_image, roi_dict, safe_mode=True)
+        else:
+            image = full_image
+
+        # Apply preprocessing
+        pipeline = PreprocessingPipeline()
+        params_dict = params.to_dict()
+        processed_image, applied_operations = pipeline.process(image, params_dict)
+
+        # Store preprocessed image
+        metadata = {
+            "source": "preprocessing",
+            "source_image_id": request.image_id,
+            "operations": applied_operations,
+        }
+        new_image_id = image_manager.store(processed_image, metadata)
+
+        # Create thumbnail for preview
+        _, thumbnail_base64 = image_manager.create_thumbnail(processed_image)
+
+    processing_time = t["ms"]
+
+    # Create result object
+    h, w = processed_image.shape[:2]
+    result_object = VisionObject(
+        object_id=f"preprocessed_{new_image_id[:8]}",
+        object_type="preprocessed_image",
+        bounding_box=ROI(x=0, y=0, width=w, height=h),
+        center=Point(x=w // 2, y=h // 2),
+        confidence=1.0,
+        properties={
+            "image_id": new_image_id,
+            "source_image_id": request.image_id,
+            "operations_applied": applied_operations,
+            "width": w,
+            "height": h,
+            "channels": 1 if len(processed_image.shape) == 2 else processed_image.shape[2],
+        },
+    )
+
+    logger.info(
+        f"Preprocessing completed: {applied_operations or 'none'}, "
+        f"new_id={new_image_id[:8]}, {processing_time}ms"
+    )
+
+    return VisionResponse(
+        objects=[result_object],
         thumbnail_base64=thumbnail_base64,
         processing_time_ms=processing_time,
     )

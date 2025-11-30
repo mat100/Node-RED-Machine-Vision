@@ -36,9 +36,11 @@ from src.domain_types import (
     ArucoReferenceMode,
     AsymmetryOrientation,
     ColorMethod,
+    MorphologyOperationType,
     Point,
     RotationMethod,
     TemplateMethod,
+    ThresholdMethod,
 )
 
 # ==============================================================================
@@ -992,6 +994,96 @@ class ArucoReferenceParams(BaseDetectionParams):
         return values
 
 
+class PreprocessParams(BaseDetectionParams):
+    """
+    Image preprocessing parameters.
+
+    All operations are optional and applied in a fixed sequence:
+    1. Grayscale → 2. Gaussian Blur → 3. Median Blur → 4. Bilateral Filter
+    5. Morphology → 6. Threshold → 7. Histogram Equalization → 8. CLAHE
+    9. Sharpening → 10. Brightness/Contrast
+    """
+
+    # === Grayscale ===
+    grayscale_enabled: bool = Field(default=False, description="Convert to grayscale")
+
+    # === Gaussian Blur ===
+    gaussian_blur_enabled: bool = Field(default=False, description="Enable Gaussian blur")
+    gaussian_kernel: int = Field(
+        default=5, ge=3, le=31, description="Gaussian kernel size (must be odd)"
+    )
+
+    # === Median Blur ===
+    median_blur_enabled: bool = Field(
+        default=False, description="Enable median blur (removes salt-pepper noise)"
+    )
+    median_kernel: int = Field(
+        default=5, ge=3, le=31, description="Median kernel size (must be odd)"
+    )
+
+    # === Bilateral Filter ===
+    bilateral_enabled: bool = Field(
+        default=False, description="Enable bilateral filter (edge-preserving smoothing)"
+    )
+    bilateral_d: int = Field(default=9, ge=1, le=15, description="Bilateral filter diameter")
+    bilateral_sigma_color: float = Field(
+        default=75.0, ge=0, description="Bilateral sigma in color space"
+    )
+    bilateral_sigma_space: float = Field(
+        default=75.0, ge=0, description="Bilateral sigma in coordinate space"
+    )
+
+    # === Morphology ===
+    morphology_enabled: bool = Field(default=False, description="Enable morphological operations")
+    morphology_operation: MorphologyOperationType = Field(
+        default=MorphologyOperationType.CLOSE,
+        description="Morphological operation: erode, dilate, open, close",
+    )
+    morphology_kernel: int = Field(default=3, ge=1, le=15, description="Morphological kernel size")
+
+    # === Thresholding ===
+    threshold_enabled: bool = Field(default=False, description="Enable thresholding")
+    threshold_method: ThresholdMethod = Field(
+        default=ThresholdMethod.BINARY,
+        description="Threshold method: binary, otsu, adaptive_mean, adaptive_gaussian",
+    )
+    threshold_value: int = Field(
+        default=127, ge=0, le=255, description="Threshold value (for binary method)"
+    )
+    threshold_max_value: int = Field(
+        default=255, ge=0, le=255, description="Maximum value after thresholding"
+    )
+    adaptive_block_size: int = Field(
+        default=11, ge=3, le=99, description="Adaptive block size (must be odd)"
+    )
+    adaptive_c: float = Field(
+        default=2.0, description="Constant subtracted from adaptive mean/gaussian"
+    )
+
+    # === Histogram Equalization ===
+    hist_equalize_enabled: bool = Field(default=False, description="Enable histogram equalization")
+
+    # === CLAHE ===
+    clahe_enabled: bool = Field(
+        default=False, description="Enable CLAHE (Contrast Limited Adaptive Histogram Equalization)"
+    )
+    clahe_clip_limit: float = Field(default=2.0, ge=0, description="CLAHE clip limit")
+    clahe_tile_grid_size: int = Field(default=8, ge=1, description="CLAHE tile grid size")
+
+    # === Sharpening ===
+    sharpen_enabled: bool = Field(default=False, description="Enable sharpening")
+    sharpen_strength: float = Field(
+        default=1.0, ge=0, le=5.0, description="Sharpening strength (unsharp mask)"
+    )
+
+    # === Brightness/Contrast ===
+    brightness_contrast_enabled: bool = Field(
+        default=False, description="Enable brightness/contrast adjustment"
+    )
+    brightness: int = Field(default=0, ge=-100, le=100, description="Brightness adjustment")
+    contrast: float = Field(default=1.0, ge=0.0, le=3.0, description="Contrast multiplier")
+
+
 # ==============================================================================
 # Vision Request Models
 # ==============================================================================
@@ -1145,6 +1237,17 @@ class RotationDetectRequest(BaseModel):
                 f"Contour must have at least 5 points for rotation detection, got {len(v)}"
             )
         return v
+
+
+class PreprocessRequest(BaseModel):
+    """Request for image preprocessing."""
+
+    image_id: str = Field(..., description="ID of the source image to preprocess")
+    roi: Optional[ROI] = Field(None, description="Optional region of interest")
+    params: Optional[PreprocessParams] = Field(
+        None,
+        description="Preprocessing parameters (all operations disabled by default)",
+    )
 
 
 # ==============================================================================

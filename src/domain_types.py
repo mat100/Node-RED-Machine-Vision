@@ -349,6 +349,25 @@ class AsymmetryOrientation(str, Enum):
     THIN_TO_THICK = "thin_to_thick"  # Orient angle from thin part to thick part
 
 
+# Preprocessing enums
+class ThresholdMethod(str, Enum):
+    """Threshold methods for image binarization."""
+
+    BINARY = "binary"  # Simple binary threshold
+    OTSU = "otsu"  # Otsu's automatic threshold
+    ADAPTIVE_MEAN = "adaptive_mean"  # Adaptive threshold using mean
+    ADAPTIVE_GAUSSIAN = "adaptive_gaussian"  # Adaptive threshold using Gaussian
+
+
+class MorphologyOperationType(str, Enum):
+    """Morphological operations for preprocessing."""
+
+    ERODE = "erode"  # Shrink white regions
+    DILATE = "dilate"  # Expand white regions
+    OPEN = "open"  # Erode then dilate (removes small white spots)
+    CLOSE = "close"  # Dilate then erode (fills small black holes)
+
+
 # Vision object type enums
 class VisionObjectType(str, Enum):
     """Types of vision objects."""
