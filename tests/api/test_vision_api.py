@@ -202,23 +202,6 @@ class TestVisionAPI:
 
         assert response.status_code == 404
 
-    def test_edge_detect_with_preprocessing(self, client, captured_image_id):
-        """Test edge detection with preprocessing options (explicit fields)"""
-        request_data = {
-            "image_id": captured_image_id,
-            "params": {
-                "method": "canny",
-                "blur_enabled": True,
-                "blur_kernel": 5,
-                "morphology_enabled": True,
-                "morphology_operation": "close",
-            },
-        }
-        response = client.post("/api/vision/edge-detect", json=request_data)
-
-        assert response.status_code == 200
-        # success removed from response
-
     def test_edge_detect_field_validation(self, client, captured_image_id):
         """Test edge detection field validation"""
         # Test with invalid canny_low (should be 0-500)

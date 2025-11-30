@@ -138,20 +138,6 @@ class TestEdgeDetector:
         assert result["success"] is True
         assert len(result["objects"]) == 0
 
-    def test_detect_with_blur_preprocessing(self, detector, test_image):
-        """Test edge detection with blur preprocessing."""
-        params = {"blur": True, "blur_kernel": 5}
-        result = detector.detect(test_image, method=EdgeMethod.CANNY, params=params)
-
-        assert result["success"] is True
-
-    def test_detect_with_morphology_preprocessing(self, detector, test_image):
-        """Test edge detection with morphological operations."""
-        params = {"dilate": True, "dilate_kernel": 3}
-        result = detector.detect(test_image, method=EdgeMethod.CANNY, params=params)
-
-        assert result["success"] is True
-
     def test_detect_result_structure(self, detector, test_image):
         """Test structure of detection result."""
         result = detector.detect(test_image, method=EdgeMethod.CANNY)

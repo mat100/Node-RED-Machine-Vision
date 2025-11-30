@@ -33,7 +33,7 @@ class EdgeDetector(BaseDetector):
         Args:
             image: Input image (BGR or grayscale)
             method: Edge detection method
-            params: Method-specific and preprocessing parameters (unified)
+            params: Method-specific parameters
 
         Returns:
             Dictionary with edge detection results
@@ -43,11 +43,8 @@ class EdgeDetector(BaseDetector):
         if params is None:
             params = {}
 
-        # Preprocessing (using params instead of separate preprocessing dict)
-        processed_image = self._preprocess(image, params)
-
         # Convert to grayscale if needed
-        gray = ensure_grayscale(processed_image)
+        gray = ensure_grayscale(image)
 
         # Apply edge detection
         if method == EdgeMethod.CANNY:
@@ -75,87 +72,15 @@ class EdgeDetector(BaseDetector):
         objects = self._contours_to_objects(filtered_contours, method.value)
 
         # Create visualization using overlay rendering function
-
         show_centers = params.get("show_centers", True)
-        image = render_edge_detection(processed_image, objects, show_centers=show_centers)
+        annotated_image = render_edge_detection(image, objects, show_centers=show_centers)
 
         return {
             "success": True,
             "method": method,
             "objects": objects,
-            "image": image,
+            "image": annotated_image,
         }
-
-    def _preprocess(self, image: np.ndarray, params: Optional[Dict[str, Any]]) -> np.ndarray:
-        """
-        Apply preprocessing to image using parameters from unified params dict.
-
-        Args:
-            image: Input image
-            params: Unified parameters dict containing preprocessing options
-
-        Returns:
-            Preprocessed image
-        """
-        if not params:
-            return image
-
-        result = image.copy()
-
-        # Gaussian blur
-        if params.get("blur_enabled", False):
-            kernel_size = int(params.get("blur_kernel", 5))
-            if kernel_size % 2 == 0:
-                kernel_size += 1  # Ensure odd kernel size
-            result = cv2.GaussianBlur(result, (kernel_size, kernel_size), 0)
-
-        # Bilateral filter (edge-preserving blur)
-        if params.get("bilateral_enabled", False):
-            d = int(params.get("bilateral_d", 9))
-            sigma_color = float(
-                params.get(
-                    "bilateral_sigma_color",
-                    75.0,
-                )
-            )
-            sigma_space = float(
-                params.get(
-                    "bilateral_sigma_space",
-                    75.0,
-                )
-            )
-            result = cv2.bilateralFilter(result, d, sigma_color, sigma_space)
-
-        # Morphological operations
-        if params.get("morphology_enabled", False):
-            operation = params.get("morphology_operation", "close")
-            kernel_size = int(
-                params.get(
-                    "morphology_kernel",
-                    3,
-                )
-            )
-            kernel = np.ones((kernel_size, kernel_size), np.uint8)
-
-            if operation == "close":
-                result = cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel)
-            elif operation == "open":
-                result = cv2.morphologyEx(result, cv2.MORPH_OPEN, kernel)
-            elif operation == "gradient":
-                result = cv2.morphologyEx(result, cv2.MORPH_GRADIENT, kernel)
-
-        # Histogram equalization
-        if params.get("equalize_enabled", False):
-            if len(result.shape) == 3:
-                # Convert to LAB and equalize L channel
-                lab = cv2.cvtColor(result, cv2.COLOR_BGR2LAB)
-                lightness, a, b = cv2.split(lab)
-                lightness = cv2.equalizeHist(lightness)
-                result = cv2.cvtColor(cv2.merge([lightness, a, b]), cv2.COLOR_LAB2BGR)
-            else:
-                result = cv2.equalizeHist(result)
-
-        return result
 
     def _detect_canny(self, gray: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
         """Apply Canny edge detection."""

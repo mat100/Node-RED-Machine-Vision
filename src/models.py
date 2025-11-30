@@ -567,7 +567,7 @@ class EdgeDetectionParams(BaseDetectionParams):
     """
     Unified edge detection parameters (flat structure).
 
-    Contains all preprocessing, filtering, and method-specific parameters
+    Contains filtering and method-specific parameters
     for all edge detection algorithms with validation and defaults.
     """
 
@@ -579,40 +579,6 @@ class EdgeDetectionParams(BaseDetectionParams):
             "prewitt, scharr, roberts, morphgrad)"
         ),
     )
-
-    # === Preprocessing parameters (common to all methods) ===
-    blur_enabled: bool = Field(default=False, description="Enable Gaussian blur preprocessing")
-    blur_kernel: int = Field(
-        default=5,
-        ge=3,
-        description="Gaussian blur kernel size (must be odd)",
-    )
-    bilateral_enabled: bool = Field(
-        default=False, description="Enable bilateral filter (edge-preserving blur)"
-    )
-    bilateral_d: int = Field(default=9, ge=1, description="Bilateral filter diameter")
-    bilateral_sigma_color: float = Field(
-        default=75.0,
-        ge=0,
-        description="Bilateral filter sigma in color space",
-    )
-    bilateral_sigma_space: float = Field(
-        default=75.0,
-        ge=0,
-        description="Bilateral filter sigma in coordinate space",
-    )
-    morphology_enabled: bool = Field(
-        default=False, description="Enable morphological preprocessing"
-    )
-    morphology_operation: str = Field(
-        default="close", description="Morphological operation (close/open/gradient)"
-    )
-    morphology_kernel: int = Field(
-        default=3,
-        ge=1,
-        description="Morphological kernel size",
-    )
-    equalize_enabled: bool = Field(default=False, description="Enable histogram equalization")
 
     # === Contour filtering parameters (common to all methods) ===
     min_contour_area: float = Field(
