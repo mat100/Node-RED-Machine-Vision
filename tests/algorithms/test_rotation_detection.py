@@ -5,7 +5,7 @@ Tests for rotation detection module.
 import numpy as np
 import pytest
 
-from domain_types import AngleRange, RotationMethod
+from domain_types import AngleRange, AsymmetryOrientation, RotationMethod
 from algorithms.rotation_detection import RotationDetector
 
 
@@ -261,3 +261,50 @@ class TestRotationDetector:
         # Contour should be preserved
         assert obj.contour is not None
         assert len(obj.contour) == len(horizontal_rectangle_contour)
+
+    @pytest.fixture
+    def asymmetric_contour(self):
+        """Asymmetric contour (tapered shape) for asymmetry orientation testing"""
+        # A tapered shape - wider at left, narrower at right
+        return [
+            [50, 70],   # top-left (wider end)
+            [150, 90],  # top-right (narrower end)
+            [150, 110], # bottom-right (narrower end)
+            [50, 130],  # bottom-left (wider end)
+        ]
+
+    def test_asymmetry_orientation_respects_angle_range_neg180_180(
+        self, detector, test_image, asymmetric_contour
+    ):
+        """Test that asymmetry orientation respects angle_range setting (regression test)"""
+        result = detector.detect(
+            test_image,
+            asymmetric_contour,
+            method=RotationMethod.MIN_AREA_RECT,
+            angle_range=AngleRange.RANGE_NEG180_180,
+            asymmetry_orientation=AsymmetryOrientation.THICK_TO_THIN,
+        )
+
+        obj = result["objects"][0]
+        # Result should be in -180 to +180 range even with asymmetry orientation
+        assert -180 <= obj.rotation <= 180, (
+            f"Angle {obj.rotation} is outside -180 to +180 range"
+        )
+
+    def test_asymmetry_orientation_respects_angle_range_0_180(
+        self, detector, test_image, asymmetric_contour
+    ):
+        """Test that asymmetry orientation respects 0-180 angle_range"""
+        result = detector.detect(
+            test_image,
+            asymmetric_contour,
+            method=RotationMethod.MIN_AREA_RECT,
+            angle_range=AngleRange.RANGE_0_180,
+            asymmetry_orientation=AsymmetryOrientation.THIN_TO_THICK,
+        )
+
+        obj = result["objects"][0]
+        # Result should be in 0 to 180 range even with asymmetry orientation
+        assert 0 <= obj.rotation <= 180, (
+            f"Angle {obj.rotation} is outside 0 to 180 range"
+        )

@@ -96,6 +96,8 @@ class RotationDetector(BaseDetector):
             angle, thickness_ratio = self._orient_by_asymmetry(
                 contour_array, angle, center, asymmetry_orientation
             )
+            # Re-apply angle range conversion after asymmetry flip
+            angle = self._convert_angle_range(angle, angle_range)
 
         # Calculate contour properties using utility function
         props = calculate_contour_properties(contour_array)
