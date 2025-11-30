@@ -602,15 +602,17 @@ class TestPreprocessingPipeline:
 
         result, applied = pipeline.process(color_image, params)
 
+        # New pipeline order (optimized for thresholding/segmentation):
+        # 1. brightness/contrast, 2. grayscale, 3. HEQ/CLAHE, 4. blur, 5. sharpen, 6. threshold, 7. morphology
         expected_ops = [
+            "brightness_contrast",
             "grayscale",
             "gaussian_blur",
             "median_blur",
             "bilateral_filter",
-            "morphology",
-            "threshold",
             "sharpening",
-            "brightness_contrast",
+            "threshold",
+            "morphology",
         ]
         assert applied == expected_ops
 

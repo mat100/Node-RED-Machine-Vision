@@ -809,3 +809,62 @@ async def preprocess(
         thumbnail_base64=thumbnail_base64,
         processing_time_ms=processing_time,
     )
+
+
+@router.post("/preprocess-preview")
+@safe_endpoint
+async def preprocess_preview(
+    request: PreprocessRequest,
+    image_manager: ImageManager = Depends(get_image_manager),
+) -> dict:
+    """
+    Apply preprocessing and return thumbnail preview only (no storage).
+
+    This endpoint is designed for live preview in Node-RED editor.
+    Unlike /preprocess, it does NOT store the preprocessed image.
+
+    INPUT:
+    - image_id: Source image ID
+    - roi: Optional region of interest
+    - params: Preprocessing parameters
+
+    OUTPUT:
+    - thumbnail_base64: Preview of preprocessed result
+    - processing_time_ms: Processing time in milliseconds
+    """
+    from image.preprocessing import PreprocessingPipeline
+
+    # Validate request
+    roi_dict = validate_vision_request(request.image_id, request.roi, image_manager)
+
+    # Create default params if not provided
+    params = request.params if request.params else PreprocessParams()
+
+    with timer() as t:
+        # Get source image
+        full_image = image_manager.get(request.image_id)
+        if full_image is None:
+            raise ImageNotFoundException(request.image_id)
+
+        # Extract ROI if specified
+        if roi_dict:
+            image = extract_roi(full_image, roi_dict, safe_mode=True)
+        else:
+            image = full_image
+
+        # Apply preprocessing
+        pipeline = PreprocessingPipeline()
+        params_dict = params.to_dict()
+        processed_image, applied_operations = pipeline.process(image, params_dict)
+
+        # Create thumbnail for preview (no storage)
+        _, thumbnail_base64 = image_manager.create_thumbnail(processed_image)
+
+    processing_time = t["ms"]
+
+    logger.debug(f"Preprocessing preview: {applied_operations or 'none'}, {processing_time}ms")
+
+    return {
+        "thumbnail_base64": thumbnail_base64,
+        "processing_time_ms": processing_time,
+    }

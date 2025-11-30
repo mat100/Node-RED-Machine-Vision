@@ -5,17 +5,16 @@ This module provides a modular preprocessing system using the Strategy pattern.
 Each operation is a separate class that can be enabled/disabled via parameters.
 Operations are applied in a fixed sequence for deterministic results.
 
-Pipeline order:
-1. Grayscale conversion
-2. Gaussian blur
-3. Median blur
-4. Bilateral filter
-5. Morphological operations
-6. Thresholding
-7. Histogram equalization
-8. CLAHE
-9. Sharpening
-10. Brightness/Contrast adjustment
+Pipeline order (optimized for thresholding/segmentation):
+1. Brightness/Contrast adjustment - adjust input levels first
+2. Grayscale conversion - convert to single channel
+3. Histogram equalization OR CLAHE - enhance contrast (pick one, not both)
+4. Blur (Gaussian OR Median OR Bilateral) - reduce noise (pick one)
+5. Sharpening - enhance edges (optional)
+6. Thresholding - segment image
+7. Morphological operations - clean binary image (post-threshold)
+
+Note: Combining multiple blur methods or both HEQ+CLAHE is not recommended.
 
 Usage:
     pipeline = PreprocessingPipeline()
@@ -312,16 +311,16 @@ class PreprocessingPipeline:
     def __init__(self):
         """Initialize pipeline with all operations in fixed order."""
         self.operations: List[PreprocessOperation] = [
-            GrayscaleOperation(),  # 1. Grayscale conversion
-            GaussianBlurOperation(),  # 2. Gaussian blur
-            MedianBlurOperation(),  # 3. Median blur
-            BilateralFilterOperation(),  # 4. Bilateral filter
-            MorphologyOperation(),  # 5. Morphological ops
+            BrightnessContrastOperation(),  # 1. Adjust input levels first
+            GrayscaleOperation(),  # 2. Grayscale conversion
+            HistogramEqualizationOperation(),  # 3a. Histogram equalization (pick one)
+            CLAHEOperation(),  # 3b. CLAHE (pick one with above)
+            GaussianBlurOperation(),  # 4a. Gaussian blur (pick one)
+            MedianBlurOperation(),  # 4b. Median blur (pick one)
+            BilateralFilterOperation(),  # 4c. Bilateral filter (pick one)
+            SharpeningOperation(),  # 5. Sharpening
             ThresholdOperation(),  # 6. Thresholding
-            HistogramEqualizationOperation(),  # 7. Histogram equalization
-            CLAHEOperation(),  # 8. CLAHE
-            SharpeningOperation(),  # 9. Sharpening
-            BrightnessContrastOperation(),  # 10. Brightness/Contrast
+            MorphologyOperation(),  # 7. Morphological ops (post-threshold)
         ]
 
     def process(self, image: np.ndarray, params: Dict[str, Any]) -> Tuple[np.ndarray, List[str]]:
